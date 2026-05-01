@@ -62,8 +62,11 @@ fn main() {
       let quit_item = MenuItem::with_id(app, "quit", "Esci", true, None::<&str>)?;
       let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
 
+      let icon = app.default_window_icon().cloned();
+
       let tray_builder = TrayIconBuilder::new()
         .tooltip("Kaizen改善")
+        .icon(icon.unwrap())
         .menu(&menu)
         .on_menu_event(|app: &tauri::AppHandle, event: tauri::menu::MenuEvent| {
           match event.id().as_ref() {
