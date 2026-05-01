@@ -404,7 +404,7 @@ export default function Landing() {
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <a
-              href="https://lpnjxkzeyiifzzycmftg.supabase.co/storage/v1/object/public/Linux/Kaizen-linux-x64.tar.gz"
+              href="https://lpnjxkzeyiifzzycmftg.supabase.co/storage/v1/object/public/Linux/Kaizen-linux-x64_0.1.1_.tar.gz"
               className="btn btn-primary btn-lg min-w-[160px] gap-2"
               target="_blank"
               rel="noreferrer"

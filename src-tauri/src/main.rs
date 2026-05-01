@@ -12,18 +12,34 @@ fn lock_path() -> PathBuf {
 }
 
 fn is_another_instance_running() -> bool {
+    use std::io::Write;
     let path = lock_path();
-    if let Ok(pid_str) = fs::read_to_string(&path) {
-        if let Ok(pid) = pid_str.trim().parse::<i32>() {
-            // Check if process is still alive via /proc
-            if std::path::Path::new(&format!("/proc/{}", pid)).exists() {
-                return true;
+    // create_new is atomic — fails iff the file already exists
+    match std::fs::OpenOptions::new().create_new(true).write(true).open(&path) {
+        Ok(mut f) => {
+            let _ = write!(f, "{}", std::process::id());
+            false
+        }
+        Err(_) => {
+            // Lock file exists — check if the owning process is still alive
+            if let Ok(pid_str) = fs::read_to_string(&path) {
+                if let Ok(pid) = pid_str.trim().parse::<i32>() {
+                    if std::path::Path::new(&format!("/proc/{}", pid)).exists() {
+                        return true;
+                    }
+                }
+            }
+            // Stale lock — remove it and retry once
+            let _ = fs::remove_file(&path);
+            match std::fs::OpenOptions::new().create_new(true).write(true).open(&path) {
+                Ok(mut f) => {
+                    let _ = write!(f, "{}", std::process::id());
+                    false
+                }
+                Err(_) => true,
             }
         }
     }
-    // Write current PID
-    let _ = fs::write(&path, std::process::id().to_string());
-    false
 }
 
 #[tauri::command]
@@ -62,11 +78,16 @@ fn main() {
       let quit_item = MenuItem::with_id(app, "quit", "Esci", true, None::<&str>)?;
       let menu = Menu::with_items(app, &[&show_item, &quit_item])?;
 
-      let icon = app.default_window_icon().cloned();
+      let icon_data = include_bytes!("../icons/icon.png");
+      let decoded = image::load_from_memory(icon_data)
+          .expect("failed to decode tray icon")
+          .into_rgba8();
+      let (w, h) = (decoded.width(), decoded.height());
+      let icon = tauri::image::Image::new_owned(decoded.into_raw(), w, h);
 
       let tray_builder = TrayIconBuilder::new()
         .tooltip("Kaizen改善")
-        .icon(icon.unwrap())
+        .icon(icon)
         .menu(&menu)
         .on_menu_event(|app: &tauri::AppHandle, event: tauri::menu::MenuEvent| {
           match event.id().as_ref() {
