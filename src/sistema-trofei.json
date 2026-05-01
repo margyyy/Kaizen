@@ -1,0 +1,153 @@
+{
+  "achievement_system": {
+    "permanent_achievements": {
+      "category_description": "Trofei sbloccabili una sola volta. Rappresentano la progressione storica dell'utente.",
+      "items": [
+        {
+          "id": "the_sage",
+          "name": "Il Saggio",
+          "description": "Ore totali accumulate dall'iscrizione.",
+          "tiers": {
+            "bronze": { "threshold": 100, "unit": "hours" },
+            "silver": { "threshold": 500, "unit": "hours" },
+            "gold": { "threshold": 1000, "unit": "hours" }
+          },
+          "stackable": false,
+          "reset_period": null
+        },
+        {
+          "id": "specialist",
+          "name": "Lo Specialista",
+          "description": "Ore totali dedicate a una singola materia.",
+          "tiers": {
+            "bronze": { "threshold": 50, "unit": "hours" },
+            "silver": { "threshold": 150, "unit": "hours" },
+            "gold": { "threshold": 300, "unit": "hours" }
+          },
+          "stackable": false,
+          "reset_period": null
+        },
+        {
+          "id": "encyclopedic",
+          "name": "Enciclopedico",
+          "description": "Numero di materie diverse create e studiate per almeno 5 ore l'una.",
+          "tiers": {
+            "bronze": { "threshold": 5, "unit": "subjects" },
+            "silver": { "threshold": 10, "unit": "subjects" },
+            "gold": { "threshold": 20, "unit": "subjects" }
+          },
+          "stackable": false,
+          "reset_period": null
+        },
+        {
+          "id": "die_hard",
+          "name": "Duro a Morire",
+          "description": "Record storico di giorni consecutivi di studio (Streak).",
+          "tiers": {
+            "bronze": { "threshold": 15, "unit": "days" },
+            "silver": { "threshold": 50, "unit": "days" },
+            "gold": { "threshold": 150, "unit": "days" }
+          },
+          "stackable": false,
+          "reset_period": null
+        }
+      ]
+    },
+    "recurring_achievements": {
+      "category_description": "Trofei che si resettano periodicamente. Una volta completati, il contatore (es. x5) aumenta sul profilo.",
+      "items": [
+        {
+          "id": "weekly_sprinter",
+          "name": "Velocista Settimanale",
+          "description": "Ore totali accumulate in una singola settimana (Lun-Dom).",
+          "reset_period": "weekly",
+          "stackable": true,
+          "tiers": {
+            "bronze": { "threshold": 15, "unit": "hours" },
+            "silver": { "threshold": 25, "unit": "hours" },
+            "gold": { "threshold": 40, "unit": "hours" }
+          }
+        },
+        {
+          "id": "weekend_warrior",
+          "name": "Guerriero del Weekend",
+          "description": "Ore di studio totali tra Sabato e Domenica.",
+          "reset_period": "weekly",
+          "stackable": true,
+          "tiers": {
+            "bronze": { "threshold": 4, "unit": "hours" },
+            "silver": { "threshold": 8, "unit": "hours" },
+            "gold": { "threshold": 12, "unit": "hours" }
+          }
+        },
+        {
+          "id": "monthly_balance",
+          "name": "Bilanciere Mensile",
+          "description": "Distribuzione del carico su più materie in un mese solare.",
+          "reset_period": "monthly",
+          "stackable": true,
+          "tiers": {
+            "bronze": {
+              "subjects": 2,
+              "hours_per_subject": 10,
+              "label": "20h totali su 2 materie"
+            },
+            "silver": {
+              "subjects": 2,
+              "hours_per_subject": 20,
+              "label": "40h totali su 2 materie"
+            },
+            "gold": {
+              "subjects": 3,
+              "hours_per_subject": 20,
+              "label": "60h totali su 3 materie"
+            }
+          }
+        },
+        {
+          "id": "monthly_consistency",
+          "name": "Costanza Mensile",
+          "description": "Numero di giorni attivi (min 30 min studio) in un mese.",
+          "reset_period": "monthly",
+          "stackable": true,
+          "tiers": {
+            "bronze": { "threshold": 15, "unit": "days" },
+            "silver": { "threshold": 22, "unit": "days" },
+            "gold": { "threshold": 28, "unit": "days" }
+          }
+        },
+        {
+          "id": "annual_legend",
+          "name": "Leggenda dell'Anno",
+          "description": "Volume totale di studio nell'anno solare.",
+          "reset_period": "yearly",
+          "stackable": true,
+          "tiers": {
+            "bronze": { "threshold": 300, "unit": "hours" },
+            "silver": { "threshold": 600, "unit": "hours" },
+            "gold": { "threshold": 1000, "unit": "hours" }
+          }
+        }
+      ]
+    },
+    "secret_achievements": {
+      "category_description": "Trofei nascosti che appaiono solo dopo lo sblocco.",
+      "items": [
+        {
+          "id": "night_owl",
+          "name": "Creatura della Notte",
+          "description": "Sessione completata tra le 00:00 e le 04:00.",
+          "trigger": "session_end_time_range",
+          "stackable": false
+        },
+        {
+          "id": "early_bird",
+          "name": "Allodola",
+          "description": "Sessione iniziata prima delle 07:00.",
+          "trigger": "session_start_time_range",
+          "stackable": false
+        }
+      ]
+    }
+  }
+}

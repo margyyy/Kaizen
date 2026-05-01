@@ -1,0 +1,278 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: "Space Grotesk", "Noto Sans JP", sans-serif;
+}
+
+/* Fade-in animation for full-screen menu */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Hide number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.rbc-calendar {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 1rem;
+  padding: 0.75rem;
+}
+
+.rbc-month-view,
+.rbc-time-view,
+.rbc-agenda-view {
+  border: 1px solid oklch(var(--bc) / 0.2);
+}
+
+.rbc-off-range-bg {
+  background: oklch(var(--b2));
+}
+
+.rbc-today {
+  background: oklch(var(--p) / 0.12);
+}
+
+.rbc-day-today {
+  background: oklch(var(--p) / 0.16) !important;
+  box-shadow: inset 0 0 0 2px oklch(var(--p) / 0.5);
+}
+
+.rbc-day-bg {
+  border-color: oklch(var(--bc) / 0.2);
+}
+
+.rbc-event {
+  background: oklch(var(--p));
+  border-radius: 0.5rem;
+  padding: 2px 6px;
+}
+
+.rbc-toolbar button {
+  border-radius: 9999px;
+  border-color: oklch(var(--bc) / 0.2);
+}
+
+/* Achievement / medal styles */
+.achievement-trophy {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.achievement-trophy-on {
+  animation: trophyGlow 1.5s ease-out;
+}
+
+@keyframes trophyGlow {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 2px oklch(var(--a) / 0.6));
+  }
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 8px oklch(var(--a) / 0.8));
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 2px oklch(var(--a) / 0.3));
+  }
+}
+
+.achievement-medal-img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  display: block;
+}
+
+.achievement-locked .achievement-medal-img {
+  opacity: 0.15;
+  filter: grayscale(100%);
+}
+
+/* Trophy box around each medal */
+.trophy-box {
+  padding: 8px 6px;
+  border-radius: 14px;
+  border: 2px solid oklch(var(--b2));
+  background: oklch(var(--b1));
+  flex: 0 0 auto;
+  width: 78px;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.trophy-box:hover {
+  border-color: oklch(var(--a) / 0.5);
+  box-shadow: 0 0 10px oklch(var(--a) / 0.15);
+}
+
+/* Counter badge for stackable trophies */
+.trophy-counter {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+  color: oklch(var(--a));
+  background: oklch(var(--a) / 0.1);
+  padding: 1px 6px;
+  border-radius: 9999px;
+  line-height: 1.4;
+}
+
+/* Overview heatmap */
+.overview-week-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.overview-day-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.overview-grid {
+  justify-items: center;
+  justify-content: center;
+}
+
+.overview-today-pulse {
+  animation: overviewPulse 2s ease-in-out infinite;
+}
+
+@keyframes overviewPulse {
+  0% { box-shadow: 0 0 0 0 oklch(var(--p) / 0.6); }
+  100% { box-shadow: 0 0 0 12px oklch(var(--p) / 0); }
+}
+
+.overview-year-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+/* Roadmap */
+.roadmap-canvas {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.roadmap-node {
+  width: 100%;
+  border: 1px solid oklch(var(--bc) / 0.15);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  background: oklch(var(--b1));
+  transition: border-color 0.2s;
+}
+
+.roadmap-node.current {
+  border-color: oklch(var(--p));
+  box-shadow: 0 0 0 2px oklch(var(--p) / 0.2);
+}
+
+.roadmap-node.completed {
+  opacity: 0.55;
+}
+
+.roadmap-node-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.roadmap-arrow {
+  width: 2px;
+  height: 28px;
+  background: oklch(var(--bc) / 0.15);
+  position: relative;
+}
+
+.roadmap-arrow::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid oklch(var(--bc) / 0.15);
+}
+
+.roadmap-arrow.completed {
+  background: oklch(var(--p));
+  animation: arrowPulse 2s ease-in-out infinite;
+}
+
+.roadmap-arrow.completed::after {
+  border-top-color: oklch(var(--p));
+}
+
+@keyframes arrowPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.roadmap-arrow.active {
+  background: oklch(var(--p) / 0.5);
+}
+
+.roadmap-arrow.active::after {
+  border-top-color: oklch(var(--p) / 0.5);
+}
+
+.roadmap-micro {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.5rem;
+}
+
+.roadmap-micro.completed {
+  opacity: 0.5;
+}
+
+.roadmap-micro.completed span {
+  text-decoration: line-through;
+}
+
+/* KaTeX overflow handling */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.katex {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}

@@ -1,0 +1,12 @@
+{
+  "identifier": "main-capability",
+  "description": "Default capability",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "notification:default",
+    "core:window:default",
+    "core:tray:default",
+    "shell:default"
+  ]
+}
