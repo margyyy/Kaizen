@@ -27,6 +27,19 @@ export default function Overlay() {
     document.documentElement.setAttribute("data-theme", `${accent}-${theme}`);
   }, []);
 
+  // Listen for theme/accent changes from the main window
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === THEME_KEY || e.key === ACCENT_KEY) {
+        const theme = localStorage.getItem(THEME_KEY) ?? "dark";
+        const accent = localStorage.getItem(ACCENT_KEY) ?? "slate";
+        document.documentElement.setAttribute("data-theme", `${accent}-${theme}`);
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   useEffect(() => {
     const unlockResize = async () => {
       const win = getCurrentWebviewWindow();
@@ -45,6 +58,15 @@ export default function Overlay() {
       }
       setState(stored);
       setRemaining(computeRemaining(stored));
+
+      // Sync theme in case storage event didn't fire (Tauri)
+      const theme = localStorage.getItem(THEME_KEY) ?? "dark";
+      const accent = localStorage.getItem(ACCENT_KEY) ?? "slate";
+      const current = document.documentElement.getAttribute("data-theme");
+      const expected = `${accent}-${theme}`;
+      if (current !== expected) {
+        document.documentElement.setAttribute("data-theme", expected);
+      }
     };
 
     tick();

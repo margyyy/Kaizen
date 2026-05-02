@@ -106,6 +106,9 @@ function AppRoot() {
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [downloads, setDownloads] = useState<import("./updateCheck").Download[]>([]);
 
+  // Sync conflict: both local and remote data exist
+  const [syncConflict, setSyncConflict] = useState<AppData | null>(null);
+
   useEffect(() => {
     if (!isTauri) return;
     checkForUpdate().then((result) => {
@@ -152,6 +155,13 @@ function AppRoot() {
       if (saved) {
         setData(saved);
         applyTheme(saved);
+        // Check for existing Google session on startup so user stays logged in
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData.session) {
+            setSyncEnabled(true);
+          }
+        } catch { /* offline or not signed in */ }
         setPhase("app");
       } else {
         setPhase("onboarding");
@@ -162,13 +172,30 @@ function AppRoot() {
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData.session) {
           const remote = await pullData();
+          const local = loadData();
+          if (remote && local && local.subjects.length > 0) {
+            // Both local and remote data — ask user instead of overwriting
+            setData(local);
+            applyTheme(local);
+            setSyncConflict(remote);
+            return;
+          }
           if (remote) {
+            // Only remote data exists
             setSyncEnabled(true);
             saveData(remote);
             setData(remote);
             setStoredUsername(remote.username);
             applyTheme(remote);
             setPhase("app");
+          } else if (local) {
+            // Only local data — push to cloud
+            setSyncEnabled(true);
+            setData(local);
+            setStoredUsername(local.username);
+            applyTheme(local);
+            setPhase("app");
+            try { await pushData(local); } catch { /* offline */ }
           } else {
             setPhase("no-account");
           }
@@ -254,7 +281,50 @@ function AppRoot() {
     setPhase("profile");
   };
 
+  // Sync conflict resolution (web)
+  const resolveSyncConflict = (useRemote: boolean) => {
+    if (useRemote && syncConflict) {
+      saveData(syncConflict);
+      setData(syncConflict);
+      setStoredUsername(syncConflict.username);
+      applyTheme(syncConflict);
+    } else if (data) {
+      pushData(data).catch(() => {});
+    }
+    setSyncEnabled(true);
+    setSyncConflict(null);
+    setPhase("app");
+  };
+
   // --- Render ---
+  if (syncConflict) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-base-200">
+        <div className="card w-full max-w-md shadow-xl bg-base-100">
+          <div className="card-body text-center">
+            <h1 className="text-2xl font-semibold">
+              Kaizen<span className="ml-2 text-xl opacity-60">改善</span>
+            </h1>
+            <p className="text-sm text-base-content/70 mt-4">
+              You have data both locally and in the cloud. Which would you like to keep?
+            </p>
+            <div className="flex gap-3 mt-4">
+              <button className="btn btn-primary flex-1" onClick={() => resolveSyncConflict(false)}>
+                Keep local data
+              </button>
+              <button className="btn btn-outline flex-1" onClick={() => resolveSyncConflict(true)}>
+                Load cloud data
+              </button>
+            </div>
+            <p className="text-xs text-base-content/40 mt-2">
+              Choosing "Keep local data" will upload it to the cloud.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (updateRequired && latestVersion && phase !== "splash") {
     return <UpdateOverlay latestVersion={latestVersion} downloads={downloads} />;
   }

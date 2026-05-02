@@ -44,18 +44,10 @@ export default function Dashboard() {
 
   // Initialize all state from localStorage so the first render is correct
   const [selectedSubjectId, setSelectedSubjectId] = useState<number | "">(
-    () => {
-      const v = loadTimer()?.subjectId ?? "";
-      console.log("[Dashboard init] selectedSubjectId:", v);
-      return v;
-    },
+    () => loadTimer()?.subjectId ?? "",
   );
   const [selectedTaskId, setSelectedTaskId] = useState<number | "">(
-    () => {
-      const v = loadTimer()?.taskId ?? "";
-      console.log("[Dashboard init] selectedTaskId:", v);
-      return v;
-    },
+    () => loadTimer()?.taskId ?? "",
   );
   const [sessionCount, setSessionCount] = useState(0);
 
@@ -100,7 +92,7 @@ export default function Dashboard() {
     setSessionCount(count);
   }, [selectedSubjectId, sessions]);
 
-  // ---- Handle pending task navigation and timer completion on mount ----
+  // ---- Handle pending task navigation and timer state on mount ----
   useEffect(() => {
     const pendingRaw = sessionStorage.getItem("pendingTask");
     if (pendingRaw) {
@@ -113,10 +105,33 @@ export default function Dashboard() {
     }
 
     const stored = loadTimer();
-    if (stored?.isRunning && computeRemaining(stored) <= 0) {
-      handleCompletion(stored);
+    if (!stored) return;
+
+    if (stored.isRunning) {
+      const remaining = computeRemaining(stored);
+      if (remaining <= 0) {
+        handleCompletion(stored);
+      } else {
+        // Auto-pause: timer was running when app was closed/reopened
+        setIsRunning(false);
+        setRemainingSec(remaining);
+        saveTimer({ ...stored, isRunning: false, remainingSec: remaining, lastTickAt: Date.now() });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ---- Auto-pause timer when tab/window is closed ----
+  useEffect(() => {
+    const pause = () => {
+      const stored = loadTimer();
+      if (stored?.isRunning) {
+        const remaining = computeRemaining(stored);
+        saveTimer({ ...stored, isRunning: false, remainingSec: remaining, lastTickAt: Date.now() });
+      }
+    };
+    window.addEventListener("beforeunload", pause);
+    return () => window.removeEventListener("beforeunload", pause);
   }, []);
 
 
@@ -127,6 +142,18 @@ export default function Dashboard() {
     const interval = setInterval(() => {
       const stored = loadTimer();
       if (!stored || !stored.isRunning) return;
+
+      // Auto-pause if there was a gap (app was hidden/closed)
+      if (stored.lastTickAt && Date.now() - stored.lastTickAt > 2500) {
+        const remaining = computeRemaining(stored);
+        setIsRunning(false);
+        setRemainingSec(remaining > 0 ? remaining : 0);
+        saveTimer({ ...stored, isRunning: false, remainingSec: remaining > 0 ? remaining : 0, lastTickAt: Date.now() });
+        if (remaining <= 0) {
+          handleCompletion(stored);
+        }
+        return;
+      }
 
       const remaining = computeRemaining(stored);
       if (remaining <= 0) {
