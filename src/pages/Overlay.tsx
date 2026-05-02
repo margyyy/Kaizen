@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { type TimerState } from "../db";
 
 const TIMER_KEY = "studyflow.timer";
+const THEME_KEY = "studyflow.theme";
+const ACCENT_KEY = "studyflow.accent";
+const DURATIONS_KEY = "studyflow.durations";
 
 function loadTimer(): TimerState | null {
   try {
@@ -16,6 +19,13 @@ function loadTimer(): TimerState | null {
 export default function Overlay() {
   const [state, setState] = useState<TimerState | null>(null);
   const [remaining, setRemaining] = useState(0);
+
+  // Apply theme and accent BEFORE paint to avoid flash
+  useLayoutEffect(() => {
+    const theme = localStorage.getItem(THEME_KEY) ?? "dark";
+    const accent = localStorage.getItem(ACCENT_KEY) ?? "slate";
+    document.documentElement.setAttribute("data-theme", `${accent}-${theme}`);
+  }, []);
 
   useEffect(() => {
     const unlockResize = async () => {
@@ -59,11 +69,12 @@ export default function Overlay() {
         lastTickAt: Date.now(),
       }));
     } else {
+      const elapsed = stored.durationSec - currentRemaining;
+      const adjustedStart = Date.now() - elapsed * 1000;
       localStorage.setItem(TIMER_KEY, JSON.stringify({
         ...stored,
         isRunning: true,
-        durationSec: currentRemaining,
-        startedAt: Date.now(),
+        startedAt: adjustedStart,
         lastTickAt: Date.now(),
       }));
     }
@@ -73,12 +84,21 @@ export default function Overlay() {
     const stored = loadTimer();
     if (!stored || stored.mode === "focus") return;
 
+    let focusDuration = 25 * 60;
+    try {
+      const raw = localStorage.getItem(DURATIONS_KEY);
+      if (raw) {
+        const cfg = JSON.parse(raw);
+        if (cfg.focus) focusDuration = cfg.focus;
+      }
+    } catch { /* use default */ }
+
     localStorage.setItem(TIMER_KEY, JSON.stringify({
       ...stored,
       mode: "focus",
       isRunning: true,
       startedAt: Date.now(),
-      durationSec: 25 * 60,
+      durationSec: focusDuration,
       lastTickAt: Date.now(),
     }));
   };

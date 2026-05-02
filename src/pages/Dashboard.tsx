@@ -26,6 +26,14 @@ function saveTimer(state: TimerState): void {
   localStorage.setItem(TIMER_KEY, JSON.stringify(state));
 }
 
+function loadDurations(): { focus: number; shortBreak: number; longBreak: number } | null {
+  try {
+    const raw = localStorage.getItem("studyflow.durations");
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
 
 export default function Dashboard() {
   const { data, setData } = useData();
@@ -34,19 +42,50 @@ export default function Dashboard() {
   const tasks = data.tasks.filter((t) => !t.completedAt);
   const sessions = data.studySessions;
 
-  const [selectedSubjectId, setSelectedSubjectId] = useState<number | "">("");
-  const [selectedTaskId, setSelectedTaskId] = useState<number | "">("");
+  // Initialize all state from localStorage so the first render is correct
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | "">(
+    () => {
+      const v = loadTimer()?.subjectId ?? "";
+      console.log("[Dashboard init] selectedSubjectId:", v);
+      return v;
+    },
+  );
+  const [selectedTaskId, setSelectedTaskId] = useState<number | "">(
+    () => {
+      const v = loadTimer()?.taskId ?? "";
+      console.log("[Dashboard init] selectedTaskId:", v);
+      return v;
+    },
+  );
   const [sessionCount, setSessionCount] = useState(0);
 
-  const [focusDuration, setFocusDuration] = useState(DEFAULT_FOCUS);
-  const [shortBreakDuration, setShortBreakDuration] = useState(DEFAULT_SHORT);
-  const [longBreakDuration, setLongBreakDuration] = useState(DEFAULT_LONG);
+  const [focusDuration, setFocusDuration] = useState(
+    () => loadDurations()?.focus ?? DEFAULT_FOCUS,
+  );
+  const [shortBreakDuration, setShortBreakDuration] = useState(
+    () => loadDurations()?.shortBreak ?? DEFAULT_SHORT,
+  );
+  const [longBreakDuration, setLongBreakDuration] = useState(
+    () => loadDurations()?.longBreak ?? DEFAULT_LONG,
+  );
   const [showDurations, setShowDurations] = useState(false);
 
-  const [mode, setMode] = useState<TimerMode>("focus");
-  const [isRunning, setIsRunning] = useState(false);
-  const [remainingSec, setRemainingSec] = useState(DEFAULT_FOCUS);
-  const [completedFocuses, setCompletedFocuses] = useState(0);
+  const [mode, setMode] = useState<TimerMode>(
+    () => (loadTimer()?.mode as TimerMode) ?? "focus",
+  );
+  const [isRunning, setIsRunning] = useState(() => {
+    const stored = loadTimer();
+    if (!stored?.isRunning) return false;
+    return computeRemaining(stored) > 0;
+  });
+  const [remainingSec, setRemainingSec] = useState(() => {
+    const stored = loadTimer();
+    if (!stored) return DEFAULT_FOCUS;
+    return computeRemaining(stored);
+  });
+  const [completedFocuses, setCompletedFocuses] = useState(
+    () => loadTimer()?.completedFocuses ?? 0,
+  );
 
   // ---- Load today's session count for selected subject ----
   useEffect(() => {
@@ -61,50 +100,21 @@ export default function Dashboard() {
     setSessionCount(count);
   }, [selectedSubjectId, sessions]);
 
-  // ---- Load saved timer state and pending task ----
+  // ---- Handle pending task navigation and timer completion on mount ----
   useEffect(() => {
     const pendingRaw = sessionStorage.getItem("pendingTask");
-    let pending: { taskId: number; subjectId: number | "" } | null = null;
     if (pendingRaw) {
       sessionStorage.removeItem("pendingTask");
-      try { pending = JSON.parse(pendingRaw); } catch { /* ignore */ }
+      try {
+        const pending = JSON.parse(pendingRaw);
+        if (pending.subjectId) setSelectedSubjectId(Number(pending.subjectId));
+        setSelectedTaskId(pending.taskId ?? "");
+      } catch { /* ignore */ }
     }
 
     const stored = loadTimer();
-    if (stored) {
-      const remaining = computeRemaining(stored);
-      if (stored.isRunning && remaining <= 0) {
-        handleCompletion(stored);
-        return;
-      }
-      // If the timer was running when the app was quit, reset it
-      if (stored.isRunning) {
-        const dur = stored.durationSec ?? DEFAULT_FOCUS;
-        setMode(stored.mode as TimerMode);
-        setIsRunning(false);
-        setRemainingSec(dur);
-        setCompletedFocuses(stored.completedFocuses);
-        saveTimer({
-          ...stored,
-          isRunning: false,
-          remainingSec: dur,
-          startedAt: undefined,
-          lastTickAt: undefined,
-        });
-      } else {
-        setMode(stored.mode as TimerMode);
-        setIsRunning(false);
-        setRemainingSec(remaining);
-        setCompletedFocuses(stored.completedFocuses);
-      }
-    }
-
-    if (pending) {
-      if (pending.subjectId) setSelectedSubjectId(Number(pending.subjectId));
-      setSelectedTaskId(pending.taskId ?? "");
-    } else if (stored) {
-      setSelectedSubjectId(stored.subjectId ?? "");
-      setSelectedTaskId(stored.taskId ?? "");
+    if (stored?.isRunning && computeRemaining(stored) <= 0) {
+      handleCompletion(stored);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -165,6 +175,15 @@ export default function Dashboard() {
     } as TimerState);
   }, [mode, durationForMode, selectedSubjectId, selectedTaskId, completedFocuses]);
 
+  // ---- Persist duration config so overlay can access it ----
+  useEffect(() => {
+    localStorage.setItem("studyflow.durations", JSON.stringify({
+      focus: focusDuration,
+      shortBreak: shortBreakDuration,
+      longBreak: longBreakDuration,
+    }));
+  }, [focusDuration, shortBreakDuration, longBreakDuration]);
+
   // ---- Poll for timer changes from overlay ----
   const isRunningRef = useRef(isRunning);
   useEffect(() => { isRunningRef.current = isRunning; }, [isRunning]);
@@ -210,14 +229,14 @@ export default function Dashboard() {
     // Resume from paused state if the timer was previously started
     if (stored && !stored.isRunning && stored.startedAt && (stored.remainingSec ?? stored.durationSec) > 0) {
       const remaining = stored.remainingSec ?? stored.durationSec;
+      const elapsed = stored.durationSec - remaining;
+      const adjustedStart = now - elapsed * 1000;
       setIsRunning(true);
       setRemainingSec(remaining);
       saveTimer({
         ...stored,
         isRunning: true,
-        durationSec: remaining,
-        remainingSec: remaining,
-        startedAt: now,
+        startedAt: adjustedStart,
         lastTickAt: now,
       });
     } else {

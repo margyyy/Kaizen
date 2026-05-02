@@ -637,16 +637,29 @@ function ProfileScreen({ username, onContinue, onCreateNew, onDelete }: {
 function AuthCallback() {
   useEffect(() => {
     let cancelled = false;
+    let unsubscribe: (() => void) | null = null;
+
     async function handle() {
       const { data } = await supabase.auth.getSession();
-      if (!cancelled && data.session) { window.location.href = "/"; return; }
+      if (cancelled) return;
+      if (data.session) { window.location.href = "/"; return; }
+
       const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
         if (!cancelled && session) window.location.href = "/";
       });
-      return () => { listener.subscription.unsubscribe(); };
+      if (cancelled) {
+        listener.subscription.unsubscribe();
+        return;
+      }
+      unsubscribe = () => listener.subscription.unsubscribe();
     }
+
     handle();
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
   return (
     <div className="min-h-screen flex items-center justify-center bg-base-200">
