@@ -171,20 +171,8 @@ export default function Dashboard() {
     };
     window.addEventListener("beforeunload", markClosed);
 
-    // Tauri: listen for window close/destroy events (beforeunload doesn't fire on window hide)
-    let tauriUnlisten: (() => void) | undefined;
-    const isTauriEnv = typeof window !== "undefined" && ("__TAURI__" in window || "__TAURI_INTERNALS__" in window);
-    if (isTauriEnv) {
-      import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
-        getCurrentWindow().onCloseRequested(async () => {
-          markClosed();
-        }).then((fn) => { tauriUnlisten = fn; });
-      }).catch(() => {});
-    }
-
     return () => {
       window.removeEventListener("beforeunload", markClosed);
-      if (tauriUnlisten) tauriUnlisten();
     };
   }, []);
 
