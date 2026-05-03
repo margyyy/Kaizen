@@ -1,20 +1,6 @@
-import { supabase } from "../supabase";
-import { useEffect, useState } from "react";
-import type { AppData } from "../storage/types";
+import { useState } from "react";
 import { useData } from "../DataContext";
-import { saveData } from "../storage";
-import {
-  isSyncEnabled,
-  setSyncEnabled,
-  getLastSync,
-  signInWithGoogle,
-  signInWithGoogleDesktop,
-  signOut,
-  deleteAccount,
-  getSession,
-  pushData,
-  pullData,
-} from "../sync";
+import { exportDataToFile, importDataFromFile } from "../storage";
 
 const THEME_KEY = "studyflow.theme";
 const ACCENT_KEY = "studyflow.accent";
@@ -60,6 +46,19 @@ export default function Settings() {
     if (!trimmed) return;
     setData((prev) => ({ ...prev, username: trimmed }));
     setEditingName(false);
+  };
+
+  const handleExport = async () => {
+    await exportDataToFile(data);
+  };
+
+  const handleImport = async () => {
+    const imported = await importDataFromFile();
+    if (imported) {
+      if (confirm("Importing will replace all current data. Continue?")) {
+        setData(() => imported);
+      }
+    }
   };
 
   return (
@@ -128,294 +127,25 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Account — web only */}
-      {!isTauri && <WebAccountSection />}
-
-      {/* Sync — desktop only */}
-      {isTauri && <SyncSection />}
-    </div>
-  );
-}
-
-function WebAccountSection() {
-  const [email, setEmail] = useState<string | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
-  const [deleteText, setDeleteText] = useState("");
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setEmail(data.session?.user?.email ?? null);
-    });
-  }, []);
-
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    // Web is always cloud — clear all local data so a new account starts fresh
-    localStorage.removeItem("studyflow.data");
-    localStorage.removeItem("studyflow.username");
-    localStorage.removeItem("studyflow.sync");
-    localStorage.removeItem("studyflow.lastSync");
-    localStorage.removeItem("studyflow.syncResolved");
-    window.location.reload();
-  };
-
-  const handleDelete = async () => {
-    if (deleteText !== "DELETE") return;
-    try { await deleteAccount(); } catch {}
-    window.location.reload();
-  };
-
-  if (!email) return null;
-
-  return (
-    <div className="card bg-base-100 shadow-sm border border-base-300">
-      <div className="card-body">
-        <h3 className="font-semibold">Account</h3>
-        <div className="flex items-center gap-2 text-sm mt-2">
-          <span className="w-2 h-2 rounded-full bg-success" />
-          <span>{email}</span>
-        </div>
-        <div className="flex items-center gap-2 mt-2">
-          <button className="btn btn-sm btn-ghost text-error" onClick={handleSignOut}>
-            Sign out
-          </button>
-          {!deleteConfirm ? (
-            <button className="btn btn-sm btn-ghost text-error/50" onClick={() => setDeleteConfirm(true)}>
-              Delete account
+      {/* Data */}
+      <div className="card bg-base-100 shadow-sm border border-base-300">
+        <div className="card-body">
+          <h3 className="font-semibold">Data</h3>
+          <p className="text-sm text-base-content/60 mt-1">
+            Export your data as a JSON file for backup, or import a previous backup.
+          </p>
+          <div className="flex gap-2 mt-3">
+            <button className="btn btn-sm btn-primary" onClick={handleExport}>
+              Export data
             </button>
-          ) : (
-            <div className="flex items-center gap-1">
-              <input
-                className="input input-bordered input-xs w-28"
-                placeholder="Type DELETE"
-                value={deleteText}
-                onChange={(e) => setDeleteText(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleDelete()}
-                autoFocus
-              />
-              <button
-                className="btn btn-xs btn-error"
-                disabled={deleteText !== "DELETE"}
-                onClick={handleDelete}
-              >
-                Confirm
-              </button>
-              <button className="btn btn-xs btn-ghost" onClick={() => { setDeleteConfirm(false); setDeleteText(""); }}>
-                Cancel
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function SyncDeleteSection({ onSignOut }: { onSignOut: () => void }) {
-  const [confirming, setConfirming] = useState(false);
-  const [text, setText] = useState("");
-
-  const handleDelete = async () => {
-    if (text !== "DELETE") return;
-    try { await deleteAccount(); } catch {}
-    window.location.reload();
-  };
-
-  return (
-    <div className="mt-2 flex items-center gap-2 flex-wrap">
-      <button className="btn btn-sm btn-ghost text-error" onClick={onSignOut}>
-        Sign out
-      </button>
-      {!confirming ? (
-        <button className="btn btn-sm btn-ghost text-error/50" onClick={() => setConfirming(true)}>
-          Delete account
-        </button>
-      ) : (
-        <div className="flex items-center gap-1">
-          <input
-            className="input input-bordered input-xs w-28"
-            placeholder="Type DELETE"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleDelete()}
-            autoFocus
-          />
-          <button className="btn btn-xs btn-error" disabled={text !== "DELETE"} onClick={handleDelete}>
-            Confirm
-          </button>
-          <button className="btn btn-xs btn-ghost" onClick={() => { setConfirming(false); setText(""); }}>
-            Cancel
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-const SYNC_RESOLVED_KEY = "studyflow.syncResolved";
-
-function SyncSection() {
-  const { data, setData } = useData();
-  const [syncOn, setSyncOn] = useState(isSyncEnabled());
-  const [lastSync, setLastSync] = useState(getLastSync());
-  const [signedIn, setSignedIn] = useState(false);
-  const [email, setEmail] = useState<string | null>(null);
-  const [pushing, setPushing] = useState(false);
-  const [conflict, setConflict] = useState<AppData | null>(null);
-
-  // On mount, check if signed in and if there's an unresolved conflict
-  useEffect(() => {
-    getSession().then(async ({ data: sessionData }) => {
-      if (!sessionData.session) return;
-      setSignedIn(true);
-      setEmail(sessionData.session.user.email ?? null);
-      setLastSync(getLastSync());
-
-      // Only check conflict if sync is ON but never resolved
-      if (isSyncEnabled() && !localStorage.getItem(SYNC_RESOLVED_KEY)) {
-        try {
-          const remote = await pullData();
-          if (remote) {
-            setConflict(remote);
-            return;
-          }
-          // No remote data, no conflict
-          localStorage.setItem(SYNC_RESOLVED_KEY, "true");
-        } catch { /* offline */ }
-      }
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const resolveConflict = async (useRemote: boolean) => {
-    if (useRemote && conflict) {
-      saveData(conflict);
-      setData(() => conflict);
-    } else {
-      try { await pushData(data); } catch { /* offline */ }
-    }
-    setConflict(null);
-    setSyncEnabled(true);
-    setSyncOn(true);
-    setLastSync(getLastSync());
-    localStorage.setItem(SYNC_RESOLVED_KEY, "true");
-  };
-
-  const enableSync = async () => {
-    setSyncEnabled(true);
-    setSyncOn(true);
-    setPushing(true);
-    try {
-      const remote = await pullData();
-      if (remote) {
-        setConflict(remote);
-        setPushing(false);
-        return;
-      }
-      // No remote data, no conflict — push local
-      localStorage.setItem(SYNC_RESOLVED_KEY, "true");
-      await pushData(data);
-      setLastSync(getLastSync());
-    } catch { /* offline */ }
-    setPushing(false);
-  };
-
-  const disableSync = () => {
-    setSyncEnabled(false);
-    setSyncOn(false);
-    localStorage.removeItem(SYNC_RESOLVED_KEY);
-  };
-
-  const handleToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      if (signedIn) {
-        enableSync();
-      }
-      setSyncEnabled(true);
-      setSyncOn(true);
-    } else {
-      disableSync();
-    }
-  };
-
-  const handleSignIn = async () => {
-    try {
-      if (isTauri) {
-        await signInWithGoogleDesktop();
-      } else {
-        await signInWithGoogle();
-      }
-    } catch { /* redirecting */ }
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    setSignedIn(false);
-    setEmail(null);
-    setSyncOn(false);
-    setSyncEnabled(false);
-    localStorage.removeItem(SYNC_RESOLVED_KEY);
-  };
-
-  return (
-    <div className="card bg-base-100 shadow-sm border border-base-300">
-      <div className="card-body">
-        <h3 className="font-semibold">Sync</h3>
-        <p className="text-sm text-base-content/60 mt-1">
-          Sync your data automatically to the cloud via Google.
-        </p>
-
-        {conflict ? (
-          <div className="mt-3 p-3 bg-warning/10 rounded-lg text-sm space-y-2">
-            <p className="font-medium">Existing data found in the cloud.</p>
-            <p className="text-base-content/60">
-              You already have synced data. Do you want to load it (replacing your local data) or keep your local data and upload it?
-            </p>
-            <div className="flex gap-2">
-              <button className="btn btn-sm btn-primary" onClick={() => resolveConflict(true)}>
-                Load cloud data
-              </button>
-              <button className="btn btn-sm btn-outline" onClick={() => resolveConflict(false)}>
-                Keep local data
-              </button>
-            </div>
-          </div>
-        ) : signedIn ? (
-          <>
-            <div className="flex items-center gap-2 text-sm mt-3">
-              <span className="w-2 h-2 rounded-full bg-success" />
-              <span>{email}</span>
-            </div>
-
-            <div className="flex items-center justify-between mt-2">
-              <span className="text-sm">{syncOn ? "Sync active" : "Sync paused"}</span>
-              <input
-                type="checkbox"
-                className="toggle"
-                checked={syncOn}
-                onChange={handleToggle}
-              />
-            </div>
-
-            {pushing && (
-              <span className="text-xs text-base-content/50">Syncing…</span>
-            )}
-
-            {lastSync && (
-              <p className="text-xs text-base-content/40">
-                Last sync: {new Date(lastSync).toLocaleString()}
-              </p>
-            )}
-
-            <SyncDeleteSection onSignOut={handleSignOut} />
-          </>
-        ) : (
-          <div className="mt-3">
-            <button className="btn btn-sm btn-primary" onClick={handleSignIn}>
-              Sign in with Google
+            <button className="btn btn-sm btn-outline" onClick={handleImport}>
+              Import data
             </button>
           </div>
-        )}
+          <p className="text-xs text-base-content/40 mt-2">
+            Importing replaces all current data with the backup. This cannot be undone.
+          </p>
+        </div>
       </div>
     </div>
   );
