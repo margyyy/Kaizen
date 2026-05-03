@@ -71,7 +71,7 @@ function AppRoot() {
   );
 
   // For web with cached session, check quickly before splash
-  const [phase, setPhase] = useState<"splash" | "onboarding" | "google-signin" | "name-prompt" | "no-account" | "profile" | "tour" | "app">(() => {
+  const [phase, setPhase] = useState<"splash" | "onboarding" | "google-signin" | "name-prompt" | "profile" | "tour" | "app">(() => {
     if (isTauri) {
       if (localStorage.getItem("studyflow.active") === "false") return "splash";
       // Always check Supabase session first — if present, go through splash
@@ -227,7 +227,7 @@ function AppRoot() {
             setPhase("app");
             try { await pushData(local); } catch { /* offline */ }
           } else {
-            setPhase("no-account");
+            setPhase("name-prompt");
           }
         } else {
           setPhase("google-signin");
@@ -389,26 +389,6 @@ function AppRoot() {
             </p>
             <button className="btn btn-primary mt-4" onClick={handleWebGoogleSignIn}>
               Sign in with Google
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === "no-account") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-base-200">
-        <div className="card w-full max-w-md shadow-xl bg-base-100">
-          <div className="card-body items-center text-center">
-            <h1 className="text-2xl font-semibold">
-              Kaizen<span className="ml-2 text-xl opacity-60">改善</span>
-            </h1>
-            <p className="text-sm text-base-content/70 mt-4">
-              No account found. Download the desktop app first to create your account, then you can sign in here.
-            </p>
-            <button className="btn btn-ghost btn-sm mt-4" onClick={handleWebSignOut}>
-              Sign out
             </button>
           </div>
         </div>
