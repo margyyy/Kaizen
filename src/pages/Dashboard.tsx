@@ -106,17 +106,15 @@ export default function Dashboard() {
     const stored = loadTimer();
     if (!stored) return;
 
-    // App was closed while timer was running → reset completely
+    // App/tab was closed while timer had state -- full reset to defaults
     if (stored.closedWhileRunning) {
       setIsRunning(false);
-      setRemainingSec(stored.durationSec);
-      saveTimer({
-        ...stored,
-        isRunning: false,
-        remainingSec: stored.durationSec,
-        closedWhileRunning: undefined,
-        lastTickAt: Date.now(),
-      });
+      setSelectedSubjectId("");
+      setSelectedTaskId("");
+      setMode("focus");
+      setRemainingSec(DEFAULT_FOCUS);
+      setCompletedFocuses(0);
+      localStorage.removeItem(TIMER_KEY);
       return;
     }
 
