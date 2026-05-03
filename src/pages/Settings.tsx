@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useData } from "../DataContext";
 import { exportDataToFile, importDataFromFile } from "../storage";
+import { deleteAccount, signOut } from "../sync";
 
 const THEME_KEY = "studyflow.theme";
 const ACCENT_KEY = "studyflow.accent";
@@ -127,26 +128,58 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* Data */}
-      <div className="card bg-base-100 shadow-sm border border-base-300">
-        <div className="card-body">
-          <h3 className="font-semibold">Data</h3>
-          <p className="text-sm text-base-content/60 mt-1">
-            Export your data as a JSON file for backup, or import a previous backup.
-          </p>
-          <div className="flex gap-2 mt-3">
-            <button className="btn btn-sm btn-primary" onClick={handleExport}>
-              Export data
-            </button>
-            <button className="btn btn-sm btn-outline" onClick={handleImport}>
-              Import data
-            </button>
+      {/* Data — desktop only: JSON import/export */}
+      {isTauri && (
+        <div className="card bg-base-100 shadow-sm border border-base-300">
+          <div className="card-body">
+            <h3 className="font-semibold">Data</h3>
+            <p className="text-sm text-base-content/60 mt-1">
+              Export your data as a JSON file for backup, or import a previous backup.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <button className="btn btn-sm btn-primary" onClick={handleExport}>
+                Export data
+              </button>
+              <button className="btn btn-sm btn-outline" onClick={handleImport}>
+                Import data
+              </button>
+            </div>
+            <p className="text-xs text-base-content/40 mt-2">
+              Importing replaces all current data with the backup. This cannot be undone.
+            </p>
           </div>
-          <p className="text-xs text-base-content/40 mt-2">
-            Importing replaces all current data with the backup. This cannot be undone.
-          </p>
         </div>
-      </div>
+      )}
+
+      {/* Account — web only: Google logout + delete account */}
+      {!isTauri && (
+        <div className="card bg-base-100 shadow-sm border border-base-300">
+          <div className="card-body">
+            <h3 className="font-semibold">Account</h3>
+            <p className="text-sm text-base-content/60 mt-1">
+              Signed in with Google. Your data is synced automatically.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <button
+                className="btn btn-sm btn-outline"
+                onClick={async () => { await signOut(); window.location.reload(); }}
+              >
+                Sign out
+              </button>
+              <button
+                className="btn btn-sm btn-ghost text-error"
+                onClick={async () => {
+                  if (!confirm("Delete your account and all data? This cannot be undone.")) return;
+                  await deleteAccount();
+                  window.location.reload();
+                }}
+              >
+                Delete account
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Version */}
       <div className="card bg-base-100 shadow-sm border border-base-300">
