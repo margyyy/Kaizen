@@ -80,12 +80,15 @@ function AppRoot() {
   // Check for existing data before deciding initial phase
   const savedData = typeof window !== "undefined" ? loadData() : null;
 
-  const [data, setData] = useState<AppData | null>(
-    savedData && localStorage.getItem("studyflow.active") !== "false" ? savedData : null
-  );
+  const [data, setData] = useState<AppData | null>(() => {
+    if (!isTauri) return null;
+    return savedData && localStorage.getItem("studyflow.active") !== "false" ? savedData : null;
+  });
 
   const [phase, setPhase] = useState<"splash" | "onboarding" | "profile" | "tour" | "app">(() => {
     if (isTauri && localStorage.getItem("studyflow.active") === "false") return "splash";
+    // Web never trusts localStorage — always starts at splash, pulls from Supabase
+    if (!isTauri) return "splash";
     if (savedData) {
       if (localStorage.getItem("studyflow.tourComplete") !== "true") return "tour";
       return "app";
@@ -205,7 +208,7 @@ function AppRoot() {
     if (!isTauri) {
       // Web: push to Supabase after creating data
       await pushData(fresh).catch(() => {});
-      setPhase("app");
+      setPhase("tour");
       return;
     }
 

@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useData } from "../DataContext";
 import { exportDataToFile, importDataFromFile } from "../storage";
-import { deleteAccount, signOut } from "../sync";
+import { deleteAccount, signOut, getSession } from "../sync";
 
 const THEME_KEY = "studyflow.theme";
 const ACCENT_KEY = "studyflow.accent";
@@ -22,6 +22,16 @@ export default function Settings() {
   const [accent, setAccent] = useState(localStorage.getItem(ACCENT_KEY) ?? "slate");
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState(data.username);
+  const [email, setEmail] = useState<string | null>(null);
+
+  // Fetch email for web Account section
+  useEffect(() => {
+    if (!isTauri) {
+      getSession().then(({ data: { session } }) => {
+        if (session?.user?.email) setEmail(session.user.email);
+      });
+    }
+  }, []);
 
   const syncThemeToData = (newAccent: string, newTheme: string) => {
     setData((prev) => ({ ...prev, theme: newTheme, accent: newAccent }));
@@ -159,6 +169,12 @@ export default function Settings() {
             <p className="text-sm text-base-content/60 mt-1">
               Signed in with Google. Your data is synced automatically.
             </p>
+            {email && (
+              <p className="text-sm mt-1">
+                <span className="text-base-content/50">Email: </span>
+                {email}
+              </p>
+            )}
             <div className="flex gap-2 mt-3">
               <button
                 className="btn btn-sm btn-outline"
