@@ -73,6 +73,7 @@ fn main() {
   tauri::Builder::default()
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_shell::init())
+    .plugin(tauri_plugin_fs::init())
     .setup(|app| {
       let show_item = MenuItem::with_id(app, "show", "Apri", true, None::<&str>)?;
       let quit_item = MenuItem::with_id(app, "quit", "Esci", true, None::<&str>)?;
