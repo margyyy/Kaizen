@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useState } from "react";
 import type { AppData } from "./storage/types";
 import { saveData } from "./storage";
 import { debugSaveAppData } from "./debug";
+import { pushData, getSession } from "./sync";
 
 interface DataContextType {
   data: AppData;
@@ -24,6 +25,14 @@ export function DataProvider({
       const next = updater(prev);
       saveData(next);
       debugSaveAppData(next).catch(() => {});
+      // Web: fire-and-forget push to Supabase
+      if (typeof window !== "undefined" && !("__TAURI__" in window)) {
+        getSession().then(({ data: { session } }) => {
+          if (session) {
+            pushData(next).catch(() => {});
+          }
+        });
+      }
       return next;
     });
   }, []);
