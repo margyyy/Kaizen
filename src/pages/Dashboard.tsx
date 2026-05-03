@@ -430,7 +430,6 @@ export default function Dashboard() {
     setMode(nextMode as TimerMode);
     setCompletedFocuses(nextCompletedFocuses);
     setRemainingSec(nextDuration);
-    setIsRunning(true);
 
     if (wasFocus) setSelectedTaskId("");
 
@@ -442,9 +441,9 @@ export default function Dashboard() {
     saveTimer({
       ...stored,
       mode: nextMode,
-      isRunning: true,
-      startedAt: Date.now(),
+      isRunning: false,
       durationSec: nextDuration,
+      remainingSec: nextDuration,
       completedFocuses: nextCompletedFocuses,
       lastTickAt: Date.now(),
       taskId: wasFocus ? undefined : stored.taskId,
