@@ -137,8 +137,10 @@ export default function Dashboard() {
   useEffect(() => {
     const markClosed = () => {
       const stored = loadTimer();
-      if (stored?.isRunning) {
-        const remaining = computeRemaining(stored);
+      if (stored) {
+        const remaining = stored.isRunning
+          ? computeRemaining(stored)
+          : (stored.remainingSec ?? stored.durationSec);
         saveTimer({
           ...stored,
           isRunning: false,
