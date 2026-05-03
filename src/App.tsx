@@ -74,11 +74,8 @@ function AppRoot() {
   const [phase, setPhase] = useState<"splash" | "onboarding" | "google-signin" | "name-prompt" | "no-account" | "profile" | "tour" | "app">(() => {
     if (isTauri) {
       if (localStorage.getItem("studyflow.active") === "false") return "splash";
-      if (savedData) {
-        if (localStorage.getItem("studyflow.tourComplete") !== "true") return "tour";
-        return "app";
-      }
-      // Check for cached Supabase session even when no local data exists
+      // Always check Supabase session first — if present, go through splash
+      // so handleSplashDone can pull cloud data and show conflict dialog if needed
       try {
         const raw = localStorage.getItem("sb-lpnjxkzeyiifzzycmftg-auth-token");
         if (raw) {
@@ -86,6 +83,10 @@ function AppRoot() {
           if (parsed?.access_token) return "splash";
         }
       } catch {}
+      if (savedData) {
+        if (localStorage.getItem("studyflow.tourComplete") !== "true") return "tour";
+        return "app";
+      }
       return "splash";
     }
     // Web: check cached session synchronously via Supabase's localStorage
@@ -184,6 +185,22 @@ function AppRoot() {
         } catch { /* offline or not signed in */ }
         if (!syncConflict) setPhase("app");
       } else {
+        // No local data — check if there's cloud data to load
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          if (sessionData.session) {
+            setSyncEnabled(true);
+            const remote = await pullData();
+            if (remote) {
+              saveData(remote);
+              setData(remote);
+              setStoredUsername(remote.username);
+              applyTheme(remote);
+              setPhase("app");
+              return;
+            }
+          }
+        } catch { /* offline */ }
         setPhase("onboarding");
       }
     } else {
