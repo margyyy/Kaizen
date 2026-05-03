@@ -19,10 +19,10 @@
 
 ### Timer
 
-- [ ] **TIMER-01**: Timer state (`studyflow.timer`) is stored in a separate localStorage key, never in AppData JSON, never synced to Supabase
-- [ ] **TIMER-02**: When the app or browser tab is completely closed, the timer must reset -- on next launch, no timer state is remembered
-- [ ] **TIMER-03**: Timer must NOT resume from a previous session under any circumstance -- always starts fresh after app restart
-- [ ] **TIMER-04**: Timer continues running when navigating between pages within the app (navbar navigation does not stop the timer)
+- [x] **TIMER-01**: Timer state (`studyflow.timer`) is stored in a separate localStorage key, never in AppData JSON, never synced to Supabase
+- [x] **TIMER-02**: When the app or browser tab is completely closed, the timer must reset -- on next launch, no timer state is remembered
+- [x] **TIMER-03**: Timer must NOT resume from a previous session under any circumstance -- always starts fresh after app restart
+- [x] **TIMER-04**: Timer continues running when navigating between pages within the app (navbar navigation does not stop the timer)
 
 ### Cross-cutting
 
@@ -48,10 +48,10 @@
 | SYNC-03 | Phase 1 | Pending |
 | SYNC-04 | Phase 1 | Pending |
 | SYNC-05 | Phase 1 | Pending |
-| TIMER-01 | Phase 1 | Pending |
-| TIMER-02 | Phase 1 | Pending |
-| TIMER-03 | Phase 1 | Pending |
-| TIMER-04 | Phase 1 | Pending |
+| TIMER-01 | Phase 1 | Complete |
+| TIMER-02 | Phase 1 | Complete |
+| TIMER-03 | Phase 1 | Complete |
+| TIMER-04 | Phase 1 | Complete |
 | CROSS-01 | Phase 1 | Pending |
 | CROSS-02 | Phase 1 | Pending |
 

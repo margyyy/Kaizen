@@ -20,8 +20,12 @@ Kaizen has critical bugs in auth, sync, and timer behavior across web and deskto
   3. Web user can register and sign in without ever using the desktop app -- no "desktop required first" gate, no local-first prompts, cloud data always overwrites local on sign-in
   4. Timer fully resets when app/tab is closed, never resumes from a previous session, but continues running during in-app navigation between pages
   5. Timer state is stored in isolated localStorage key (`studyflow.timer`) only, never embedded in AppData JSON or synced to Supabase
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 01-01-PLAN.md -- Auth & sync fixes: web login, no-account removal, conflict dialog triggers
+- [x] 01-02-PLAN.md -- Timer fixes: full reset on app close, navigation continuity, isolation verification
 
 ## Progress
 
@@ -30,4 +34,4 @@ Phases execute in numeric order: 1
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Bug Fixes -- Auth, Sync, and Timer Stability | 0/0 | Not started | - |
+| 1. Bug Fixes -- Auth, Sync, and Timer Stability | 1/2 | In progress | 2026-05-03 (Plan 2) |
