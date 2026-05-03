@@ -11,8 +11,6 @@ import type { AppData } from "./storage/types";
 import { loadData, saveData } from "./storage";
 import { createEmptyData } from "./storage/types";
 import { getStoredUsername, setStoredUsername, clearStoredUsername } from "./auth";
-import { supabase } from "./supabase";
-import { pullData, pushData, setSyncEnabled, signInWithGoogle } from "./sync";
 import { checkForUpdate } from "./updateCheck";
 import { debugLog } from "./debug";
 import UpdateOverlay from "./UpdateOverlay";
@@ -57,7 +55,6 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="*" element={<AppRoot />} />
     </Routes>
   );
@@ -65,48 +62,18 @@ function AppRoutes() {
 
 function AppRoot() {
   // Check for existing data before deciding initial phase
-  const savedData = typeof window !== "undefined" && isTauri ? loadData() : null;
+  const savedData = typeof window !== "undefined" ? loadData() : null;
 
   const [data, setData] = useState<AppData | null>(
     savedData && localStorage.getItem("studyflow.active") !== "false" ? savedData : null
   );
 
-  // For web with cached session, check quickly before splash
-  const [phase, setPhase] = useState<"splash" | "onboarding" | "google-signin" | "name-prompt" | "profile" | "tour" | "app">(() => {
-    if (isTauri) {
-      if (localStorage.getItem("studyflow.active") === "false") return "splash";
-      // Always check Supabase session first — if present, go through splash
-      // so handleSplashDone can pull cloud data and show conflict dialog if needed
-      try {
-        const raw = localStorage.getItem("sb-lpnjxkzeyiifzzycmftg-auth-token");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.access_token) {
-            debugLog("initPhase", "desktop: found cached token, going to splash").catch(() => {});
-            return "splash";
-          }
-        }
-      } catch {}
-      if (savedData) {
-        debugLog("initPhase", `desktop: has local data (${savedData.subjects.length} subjects), no token`).catch(() => {});
-        if (localStorage.getItem("studyflow.tourComplete") !== "true") return "tour";
-        return "app";
-      }
-      debugLog("initPhase", "desktop: no data, no token, going to splash").catch(() => {});
-      return "splash";
+  const [phase, setPhase] = useState<"splash" | "onboarding" | "profile" | "tour" | "app">(() => {
+    if (isTauri && localStorage.getItem("studyflow.active") === "false") return "splash";
+    if (savedData) {
+      if (localStorage.getItem("studyflow.tourComplete") !== "true") return "tour";
+      return "app";
     }
-    // Web: check cached session synchronously via Supabase's localStorage
-    try {
-      const raw = localStorage.getItem("sb-lpnjxkzeyiifzzycmftg-auth-token");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed?.access_token) {
-          debugLog("initPhase", "web: found cached token, going to splash").catch(() => {});
-          return "splash"; // has token, will check in handleSplashDone
-        }
-      }
-    } catch {}
-    debugLog("initPhase", "web: no cached token, going to splash").catch(() => {});
     return "splash";
   });
 
@@ -124,9 +91,6 @@ function AppRoot() {
   const [updateRequired, setUpdateRequired] = useState(false);
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [downloads, setDownloads] = useState<import("./updateCheck").Download[]>([]);
-
-  // Sync conflict: both local and remote data exist
-  const [syncConflict, setSyncConflict] = useState<AppData | null>(null);
 
   useEffect(() => {
     if (!isTauri) return;
@@ -162,110 +126,20 @@ function AppRoot() {
   };
 
   // After splash, decide where to go
-  const handleSplashDone = async () => {
-    debugLog("handleSplashDone", `platform=${isTauri ? "desktop" : "web"}`).catch(() => {});
-    if (isTauri) {
-      // Desktop: check for existing data, Google session, and cloud data
-      if (showProfile) {
-        localStorage.setItem("studyflow.active", "true");
-        setPhase("profile");
-        return;
-      }
-      const saved = loadData();
-      if (saved) {
-        setData(saved);
-        applyTheme(saved);
-        try {
-          const { data: sessionData } = await supabase.auth.getSession();
-          if (sessionData.session) {
-            setSyncEnabled(true);
-            const remote = await pullData();
-            if (remote && saved.subjects.length > 0) {
-              // Both local and remote data — show conflict dialog
-              setSyncConflict(remote);
-              return;
-            }
-            if (remote) {
-              // Only remote data — overwrite local
-              saveData(remote);
-              setData(remote);
-              setStoredUsername(remote.username);
-              applyTheme(remote);
-            }
-          }
-        } catch { /* offline or not signed in */ }
-        if (!syncConflict) setPhase("app");
-      } else {
-        // No local data — check if there's cloud data to load
-        try {
-          const { data: sessionData } = await supabase.auth.getSession();
-          if (sessionData.session) {
-            setSyncEnabled(true);
-            const remote = await pullData();
-            if (remote) {
-              saveData(remote);
-              setData(remote);
-              setStoredUsername(remote.username);
-              applyTheme(remote);
-              setPhase("app");
-              return;
-            }
-          }
-        } catch { /* offline */ }
-        setPhase("onboarding");
-      }
-    } else {
-      // Web: always cloud — never use local data, never push local to cloud
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData.session) {
-          const remote = await pullData();
-          if (remote) {
-            // Cloud data exists — load it
-            setSyncEnabled(true);
-            saveData(remote);
-            setData(remote);
-            setStoredUsername(remote.username);
-            applyTheme(remote);
-            setPhase("app");
-          } else {
-            // No cloud data — new user, start fresh
-            setPhase("name-prompt");
-          }
-        } else {
-          setPhase("google-signin");
-        }
-      } catch {
-        setPhase("google-signin");
-      }
+  const handleSplashDone = () => {
+    if (isTauri && showProfile) {
+      localStorage.setItem("studyflow.active", "true");
+      setPhase("profile");
+      return;
     }
-  };
-
-  // --- Web handlers ---
-  const handleWebGoogleSignIn = async () => {
-    try { await signInWithGoogle(); } catch { /* redirecting */ }
-  };
-
-  const handleWebName = async (username: string) => {
-    const fresh = createEmptyData(username, draftTheme, draftAccent);
-    setSyncEnabled(true);
-    saveData(fresh);
-    setStoredUsername(username);
-    setData(fresh);
-    setPhase("app");
-    try { await pushData(fresh); } catch { /* offline */ }
-  };
-
-  const handleWebSignOut = async () => {
-    await supabase.auth.signOut();
-    // Web is always cloud — clear all local data so a new account starts fresh
-    localStorage.removeItem("studyflow.data");
-    localStorage.removeItem("studyflow.username");
-    localStorage.removeItem("studyflow.sync");
-    localStorage.removeItem("studyflow.lastSync");
-    localStorage.removeItem("studyflow.syncResolved");
-    setData(null);
-    setPhase("google-signin");
+    const saved = loadData();
+    if (saved) {
+      setData(saved);
+      applyTheme(saved);
+      setPhase("app");
+    } else {
+      setPhase("onboarding");
+    }
   };
 
   // --- Desktop handlers ---
@@ -287,31 +161,12 @@ function AppRoot() {
     }
   };
 
-  const handleDesktopContinue = async () => {
+  const handleDesktopContinue = () => {
     const saved = loadData();
     if (saved) {
       setData(saved);
       setStoredUsername(saved.username);
       applyTheme(saved);
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData.session) {
-          setSyncEnabled(true);
-          const remote = await pullData();
-          if (remote && saved.subjects.length > 0) {
-            // Both local and remote data exist -- show conflict dialog
-            setSyncConflict(remote);
-            return;
-          }
-          if (remote) {
-            // Only remote data -- overwrite local
-            saveData(remote);
-            setData(remote);
-            setStoredUsername(remote.username);
-            applyTheme(remote);
-          }
-        }
-      } catch { /* offline or not signed in */ }
       setPhase("app");
     }
   };
@@ -339,95 +194,13 @@ function AppRoot() {
     setPhase("profile");
   };
 
-  // Sync conflict resolution
-  const resolveSyncConflict = (useRemote: boolean) => {
-    debugLog("resolveSyncConflict", `useRemote=${useRemote} hasConflict=${!!syncConflict} hasData=${!!data}`).catch(() => {});
-    if (useRemote && syncConflict) {
-      saveData(syncConflict);
-      setData(syncConflict);
-      setStoredUsername(syncConflict.username);
-      applyTheme(syncConflict);
-    } else if (data) {
-      pushData(data).catch(() => {});
-    }
-    setSyncEnabled(true);
-    setSyncConflict(null);
-    setPhase("app");
-  };
-
   // --- Render ---
-  if (syncConflict) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-base-200">
-        <div className="card w-full max-w-md shadow-xl bg-base-100">
-          <div className="card-body text-center">
-            <h1 className="text-2xl font-semibold">
-              Kaizen<span className="ml-2 text-xl opacity-60">改善</span>
-            </h1>
-            <p className="text-sm text-base-content/70 mt-4">
-              You have data both locally and in the cloud. Which would you like to keep?
-            </p>
-            <div className="flex gap-3 mt-4">
-              <button className="btn btn-primary flex-1" onClick={() => resolveSyncConflict(true)}>
-                Load cloud data
-              </button>
-              <button className="btn btn-outline flex-1" onClick={() => resolveSyncConflict(false)}>
-                Keep local data
-              </button>
-            </div>
-            <p className="text-xs text-base-content/40 mt-2">
-              Choosing "Load cloud data" will replace all local data with your cloud data.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (updateRequired && latestVersion && phase !== "splash") {
     return <UpdateOverlay latestVersion={latestVersion} downloads={downloads} />;
   }
 
   if (phase === "splash") {
     return <SplashScreen onDone={handleSplashDone} />;
-  }
-
-  if (phase === "google-signin") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-base-200">
-        <div className="card w-full max-w-md shadow-xl bg-base-100">
-          <div className="card-body items-center text-center">
-            <h1 className="text-2xl font-semibold">
-              Kaizen<span className="ml-2 text-xl opacity-60">改善</span>
-            </h1>
-            <p className="text-sm text-base-content/70 mt-2">
-              Sign in to sync your study data across devices.
-            </p>
-            <button className="btn btn-primary mt-4" onClick={handleWebGoogleSignIn}>
-              Sign in with Google
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (phase === "name-prompt") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-base-200">
-        <div className="card w-full max-w-md shadow-xl bg-base-100">
-          <div className="card-body">
-            <h1 className="text-2xl font-semibold text-center">
-              Kaizen<span className="ml-2 text-xl opacity-60">改善</span>
-            </h1>
-            <p className="text-sm text-base-content/70 text-center mt-2">
-              You're signed in. Choose a display name.
-            </p>
-            <NameForm onName={handleWebName} />
-          </div>
-        </div>
-      </div>
-    );
   }
 
   if (phase === "onboarding") {
@@ -464,7 +237,7 @@ function AppRoot() {
       <DataProvider data={data!}>
         <TourGuide onFinish={() => setPhase("app")}>
           <AppShell
-            onLogout={isTauri ? handleDesktopSignOut : handleWebSignOut}
+            onLogout={isTauri ? handleDesktopSignOut : undefined}
             isWeb={!isTauri}
           />
         </TourGuide>
@@ -476,7 +249,7 @@ function AppRoot() {
   return (
     <DataProvider data={data!}>
       <AppShell
-        onLogout={isTauri ? handleDesktopSignOut : handleWebSignOut}
+        onLogout={isTauri ? handleDesktopSignOut : undefined}
         isWeb={!isTauri}
       />
     </DataProvider>
@@ -699,25 +472,6 @@ function AccentStep({ accent, onSet, theme, onBack, onFinish }: { accent: string
   );
 }
 
-// ─── Name form (web) ──────────────────────────────────────────────
-
-function NameForm({ onName }: { onName: (name: string) => void }) {
-  const [name, setName] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) { setError("Enter a name"); return; }
-    onName(name.trim());
-  };
-  return (
-    <form className="space-y-3 mt-4" onSubmit={handleSubmit}>
-      <input className="input input-bordered w-full" value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoFocus />
-      {error && <p className="text-xs text-error text-center">{error}</p>}
-      <button className="btn btn-primary w-full" type="submit">Get started</button>
-    </form>
-  );
-}
-
 // ─── Profile screen (desktop, after sign out) ─────────────────────
 
 function ProfileScreen({ username, onContinue, onCreateNew, onDelete }: {
@@ -741,48 +495,9 @@ function ProfileScreen({ username, onContinue, onCreateNew, onDelete }: {
   );
 }
 
-// ─── Auth callback ────────────────────────────────────────────────
-
-function AuthCallback() {
-  useEffect(() => {
-    let cancelled = false;
-    let unsubscribe: (() => void) | null = null;
-
-    async function handle() {
-      const { data } = await supabase.auth.getSession();
-      if (cancelled) return;
-      if (data.session) { window.location.href = "/"; return; }
-
-      const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (!cancelled && session) window.location.href = "/";
-      });
-      if (cancelled) {
-        listener.subscription.unsubscribe();
-        return;
-      }
-      unsubscribe = () => listener.subscription.unsubscribe();
-    }
-
-    handle();
-
-    return () => {
-      cancelled = true;
-      if (unsubscribe) unsubscribe();
-    };
-  }, []);
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-base-200">
-      <div className="flex items-center gap-3">
-        <span className="loading loading-ring loading-lg" />
-        <span className="text-base-content/60">Completing sign in...</span>
-      </div>
-    </div>
-  );
-}
-
 // ─── App shell ────────────────────────────────────────────────────
 
-function AppShell({ onLogout, isWeb }: { onLogout: () => void; isWeb?: boolean }) {
+function AppShell({ onLogout, isWeb }: { onLogout?: () => void; isWeb?: boolean }) {
   const location = useLocation();
   const isOverlay = location.pathname === "/overlay";
   const [menuOpen, setMenuOpen] = useState(false);
@@ -845,7 +560,7 @@ function AppShell({ onLogout, isWeb }: { onLogout: () => void; isWeb?: boolean }
                     );
                   })}
                   {!isWeb && <hr className="border-base-300 my-4 w-full max-w-xs" />}
-                  {!isWeb && (
+                  {!isWeb && onLogout && (
                     <button className="btn btn-ghost btn-lg w-full max-w-xs text-lg font-medium justify-start text-error"
                       onClick={() => { setMenuOpen(false); onLogout(); }}>
                       Sign out

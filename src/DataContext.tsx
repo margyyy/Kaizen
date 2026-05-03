@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useState } from "react";
 import type { AppData } from "./storage/types";
-import { loadData, saveData } from "./storage";
-import { isSyncEnabled, pushData } from "./sync";
+import { saveData } from "./storage";
 import { debugSaveAppData } from "./debug";
 
 interface DataContextType {
@@ -10,18 +9,6 @@ interface DataContextType {
 }
 
 const DataContext = createContext<DataContextType | null>(null);
-
-let syncTimer: ReturnType<typeof setTimeout> | null = null;
-
-function scheduleSync() {
-  if (!isSyncEnabled()) return;
-  if (syncTimer) clearTimeout(syncTimer);
-  syncTimer = setTimeout(async () => {
-    const latest = loadData();
-    if (!latest) return;
-    try { await pushData(latest); } catch { /* offline */ }
-  }, 2000);
-}
 
 export function DataProvider({
   data,
@@ -36,7 +23,6 @@ export function DataProvider({
     setState((prev) => {
       const next = updater(prev);
       saveData(next);
-      scheduleSync();
       debugSaveAppData(next).catch(() => {});
       return next;
     });
