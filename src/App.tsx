@@ -11,6 +11,7 @@ import type { AppData } from "./storage/types";
 import { loadData, saveData } from "./storage";
 import { createEmptyData } from "./storage/types";
 import { getStoredUsername, setStoredUsername, clearStoredUsername } from "./auth";
+import { getSession, signInWithGoogle, pullData, pushData } from "./sync";
 import { checkForUpdate } from "./updateCheck";
 import { debugLog } from "./debug";
 import UpdateOverlay from "./UpdateOverlay";
@@ -55,8 +56,23 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/auth/callback" element={<AuthCallback />} />
       <Route path="*" element={<AppRoot />} />
     </Routes>
+  );
+}
+
+function AuthCallback() {
+  useEffect(() => {
+    getSession().then(() => {
+      sessionStorage.setItem("landingSkip", "1");
+      window.location.href = "/";
+    });
+  }, []);
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-base-200">
+      <span className="loading loading-spinner loading-lg" />
+    </div>
   );
 }
 
@@ -103,6 +119,17 @@ function AppRoot() {
     });
   }, []);
 
+  // Web session guard: if web somehow reaches app without a session, redirect to splash
+  useEffect(() => {
+    if (!isTauri && phase === "app") {
+      getSession().then(({ data: { session } }) => {
+        if (!session) {
+          setPhase("splash");
+        }
+      });
+    }
+  }, [phase]);
+
   // Apply theme immediately for desktop skip-splash case
   if (isTauri && savedData && phase === "app") {
     document.documentElement.setAttribute("data-theme",
@@ -126,7 +153,28 @@ function AppRoot() {
   };
 
   // After splash, decide where to go
-  const handleSplashDone = () => {
+  const handleSplashDone = async () => {
+    if (!isTauri) {
+      // Web flow: check session, pull data, decide
+      const { data: { session } } = await getSession();
+      if (session) {
+        try {
+          const remote = await pullData();
+          if (remote) {
+            setData(remote);
+            setStoredUsername(remote.username);
+            applyTheme(remote);
+            setPhase("app");
+            return;
+          }
+        } catch {
+          // pullData failed — treat as new user
+        }
+        // No remote data (or pull failed) → onboarding
+        setPhase("onboarding");
+      }
+      return;
+    }
     if (isTauri && showProfile) {
       localStorage.setItem("studyflow.active", "true");
       setPhase("profile");
@@ -142,8 +190,8 @@ function AppRoot() {
     }
   };
 
-  // --- Desktop handlers ---
-  const finishOnboarding = () => {
+  // --- Onboarding finish ---
+  const finishOnboarding = async () => {
     const name = draftName.trim() || "User";
     localStorage.setItem(THEME_KEY, draftTheme);
     localStorage.setItem(ACCENT_KEY, draftAccent);
@@ -153,7 +201,15 @@ function AppRoot() {
     saveData(fresh);
     setStoredUsername(name);
     setData(fresh);
-    // New desktop users get the tour
+
+    if (!isTauri) {
+      // Web: push to Supabase after creating data
+      await pushData(fresh).catch(() => {});
+      setPhase("app");
+      return;
+    }
+
+    // Desktop: new users get the tour
     if (localStorage.getItem("studyflow.tourComplete") !== "true") {
       setPhase("tour");
     } else {
@@ -200,7 +256,7 @@ function AppRoot() {
   }
 
   if (phase === "splash") {
-    return <SplashScreen onDone={handleSplashDone} />;
+    return <SplashScreen onDone={handleSplashDone} isWeb={!isTauri} />;
   }
 
   if (phase === "onboarding") {
@@ -258,12 +314,35 @@ function AppRoot() {
 
 // ─── Splash Screen ────────────────────────────────────────────────
 
-function SplashScreen({ onDone }: { onDone: () => void }) {
+function SplashScreen({ onDone, isWeb }: { onDone: () => void; isWeb?: boolean }) {
   const [showBtn, setShowBtn] = useState(false);
+  const [autoProceed, setAutoProceed] = useState(false);
+
   useEffect(() => {
+    if (isWeb) {
+      getSession().then(({ data: { session } }) => {
+        if (session) {
+          setAutoProceed(true);
+          onDone();
+        } else {
+          // Show sign-in button after a brief delay for the title animation
+          const t = setTimeout(() => setShowBtn(true), 2500);
+          return () => clearTimeout(t);
+        }
+      });
+      return;
+    }
     const t = setTimeout(() => setShowBtn(true), 4000);
     return () => clearTimeout(t);
-  }, []);
+  }, [isWeb, onDone]);
+
+  if (autoProceed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-base-200">
+        <span className="loading loading-spinner loading-lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-between bg-base-200">
@@ -277,10 +356,18 @@ function SplashScreen({ onDone }: { onDone: () => void }) {
       </div>
 
       <div className="pb-8 h-16 flex items-center">
-        {showBtn && (
-          <button className="splash-fadein text-base-content/50 text-sm hover:text-base-content transition-colors" onClick={onDone}>
-            Continue
-          </button>
+        {isWeb ? (
+          showBtn && (
+            <button className="btn btn-primary" onClick={signInWithGoogle}>
+              Sign in with Google
+            </button>
+          )
+        ) : (
+          showBtn && (
+            <button className="splash-fadein text-base-content/50 text-sm hover:text-base-content transition-colors" onClick={onDone}>
+              Continue
+            </button>
+          )
         )}
       </div>
 
