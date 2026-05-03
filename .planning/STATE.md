@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: completed
 stopped_at: Completed 01-01-PLAN.md (Auth/Sync fixes) and 01-02-PLAN.md (Timer stability)
-last_updated: "2026-05-03T14:20:44.957Z"
-last_activity: 2026-05-03 -- Completed Plan 1 (Auth/Sync) + Plan 2 (Timer Stability)
+last_updated: "2026-05-03T17:57:00.000Z"
+last_activity: 2026-05-03 -- Completed quick task 260503-on8: Offline-only mode, JSON export/import, timer tray persistence
 progress:
   total_phases: 1
   completed_phases: 1
@@ -20,7 +20,7 @@ progress:
 
 See: .planning/PROJECT.md (updated 2026-05-03)
 
-**Core value:** Reliable, distraction-free Pomodoro timer that persists study sessions and syncs seamlessly across web and desktop via Google-authenticated cloud sync.
+**Core value:** Reliable, distraction-free Pomodoro timer that persists study sessions locally with JSON export/import for backup.
 **Current focus:** Phase 1 -- Bug Fixes: Auth, Sync, and Timer Stability
 
 ## Current Position
@@ -73,6 +73,12 @@ None yet.
 
 None yet.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260503-on8 | Offline-only mode: disable Google auth (preserve code), add JSON export/import buttons in Settings, timer persists on tray close (reset only on full kill) | 2026-05-03 | e23f68e | [260503-on8-offline-only-mode-disable-google-auth-pr](./quick/260503-on8-offline-only-mode-disable-google-auth-pr/) |
+
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
@@ -81,8 +87,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-05-03T14:20:44.954Z
-Stopped at: Completed 01-01-PLAN.md (Auth/Sync fixes) and 01-02-PLAN.md (Timer stability)
+Last session: 2026-05-03T22:27:31.000Z
+Stopped at: Completed quick task 260503-on8 (Offline-only mode)
 Resume file: None
 
 ## Plan 02 Metrics
