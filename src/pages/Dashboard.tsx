@@ -323,8 +323,9 @@ export default function Dashboard() {
 
   const resetTimer = () => {
     setIsRunning(false);
+    setCompletedFocuses(0);
     setRemainingSec(durationForMode);
-    saveTimer(buildState({ isRunning: false, remainingSec: durationForMode }));
+    saveTimer(buildState({ isRunning: false, remainingSec: durationForMode, completedFocuses: 0 }));
   };
 
   const skipBreak = () => {
