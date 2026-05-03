@@ -5,7 +5,7 @@ milestone_name: milestone
 status: completed
 stopped_at: Completed 01-01-PLAN.md (Auth/Sync fixes) and 01-02-PLAN.md (Timer stability)
 last_updated: "2026-05-03T17:57:00.000Z"
-last_activity: 2026-05-03 -- Completed quick task 260503-on8: Offline-only mode, JSON export/import, timer tray persistence
+last_activity: 2026-05-03 -- Completed quick task 260503-w2g: Classic Pomodoro session tracking (pause locks, manual start, reset zeros counter)
 progress:
   total_phases: 1
   completed_phases: 1
@@ -78,6 +78,7 @@ None yet.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 260503-on8 | Offline-only mode: disable Google auth (preserve code), add JSON export/import buttons in Settings, timer persists on tray close (reset only on full kill) | 2026-05-03 | e23f68e | [260503-on8-offline-only-mode-disable-google-auth-pr](./quick/260503-on8-offline-only-mode-disable-google-auth-pr/) |
+| 260503-w2g | Implement classic Pomodoro session tracking: pause locks subject/task/mode (only reset unlocks), manual start after completion (no auto-start), reset zeros completedFocuses counter | 2026-05-03 | 6d3cb23 | [260503-w2g-implement-classic-pomodoro-session-track](./quick/260503-w2g-implement-classic-pomodoro-session-track/) |
 
 ## Deferred Items
 
