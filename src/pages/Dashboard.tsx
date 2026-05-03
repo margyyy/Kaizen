@@ -265,6 +265,7 @@ export default function Dashboard() {
 
   const canStart = mode !== "focus" || selectedSubjectId !== "";
   const isBreak = mode === "shortBreak" || mode === "longBreak";
+  const isActive = loadTimer()?.startedAt != null;
 
   // ---- Timer controls ----
   const buildState = (overrides: Partial<TimerState>): TimerState => ({
@@ -461,9 +462,9 @@ export default function Dashboard() {
       <div className="card bg-base-100 shadow-sm border border-base-300 w-full max-w-xl p-6 sm:p-8 flex flex-col items-center">
         {/* ---- Modes ---- */}
         <div className="flex flex-wrap justify-center gap-2 mb-6">
-          <button className={`btn btn-sm ${mode === "focus" ? "btn-primary" : "btn-ghost"}`} onClick={() => switchMode("focus")} disabled={isRunning}>Focus</button>
-          <button className={`btn btn-sm ${mode === "shortBreak" ? "btn-primary" : "btn-ghost"}`} onClick={() => switchMode("shortBreak")} disabled={isRunning}>Short Break</button>
-          <button className={`btn btn-sm ${mode === "longBreak" ? "btn-primary" : "btn-ghost"}`} onClick={() => switchMode("longBreak")} disabled={isRunning}>Long Break</button>
+          <button className={`btn btn-sm ${mode === "focus" ? "btn-primary" : "btn-ghost"}`} onClick={() => switchMode("focus")} disabled={isActive}>Focus</button>
+          <button className={`btn btn-sm ${mode === "shortBreak" ? "btn-primary" : "btn-ghost"}`} onClick={() => switchMode("shortBreak")} disabled={isActive}>Short Break</button>
+          <button className={`btn btn-sm ${mode === "longBreak" ? "btn-primary" : "btn-ghost"}`} onClick={() => switchMode("longBreak")} disabled={isActive}>Long Break</button>
         </div>
 
         {/* ---- Timer ring ---- */}
@@ -497,7 +498,7 @@ export default function Dashboard() {
 
         {/* ---- Subject & Task selection ---- */}
         <div className="w-full max-w-xs space-y-3 mb-4">
-          <div className={`dropdown w-full ${isRunning ? "pointer-events-none opacity-60" : ""}`}>
+          <div className={`dropdown w-full ${isActive ? "pointer-events-none opacity-60" : ""}`}>
             <div tabIndex={0} role="button" className="btn btn-outline btn-sm w-full justify-between font-normal">
               <span className={selectedSubjectId === "" ? "text-base-content/50" : ""}>
                 {selectedSubjectId === "" ? "Select subject" : subjects.find((s) => s.id === selectedSubjectId)?.name ?? "Select subject"}
@@ -513,7 +514,7 @@ export default function Dashboard() {
           </div>
 
           {selectedSubjectId !== "" && tasksForSubject.length > 0 && (
-            <div className={`dropdown w-full ${isRunning ? "pointer-events-none opacity-60" : ""}`}>
+            <div className={`dropdown w-full ${isActive ? "pointer-events-none opacity-60" : ""}`}>
               <div tabIndex={0} role="button" className="btn btn-outline btn-sm w-full justify-between font-normal">
                 <span className={selectedTaskId === "" ? "text-base-content/50" : ""}>
                   {selectedTaskId === "" ? "Select task (optional)" : tasksForSubject.find((t) => t.id === selectedTaskId)?.title ?? "Select task"}
