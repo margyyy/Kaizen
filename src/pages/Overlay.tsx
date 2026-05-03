@@ -56,6 +56,19 @@ export default function Overlay() {
         setRemaining(0);
         return;
       }
+      // Reset if app was closed while timer was running
+      if (stored.closedWhileRunning) {
+        localStorage.setItem(TIMER_KEY, JSON.stringify({
+          ...stored,
+          isRunning: false,
+          remainingSec: stored.durationSec,
+          closedWhileRunning: undefined,
+          lastTickAt: Date.now(),
+        }));
+        setState(null);
+        setRemaining(0);
+        return;
+      }
       setState(stored);
       setRemaining(computeRemaining(stored));
 
@@ -88,6 +101,7 @@ export default function Overlay() {
         ...stored,
         isRunning: false,
         remainingSec: currentRemaining,
+        closedWhileRunning: undefined,
         lastTickAt: Date.now(),
       }));
     } else {
@@ -97,6 +111,7 @@ export default function Overlay() {
         ...stored,
         isRunning: true,
         startedAt: adjustedStart,
+        closedWhileRunning: undefined,
         lastTickAt: Date.now(),
       }));
     }

@@ -39,6 +39,7 @@ export interface TimerState {
   taskId?: number;
   completedFocuses: number;
   lastTickAt?: number;
+  closedWhileRunning?: boolean;
 }
 
 export interface Roadmap {

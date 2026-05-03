@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import {
   type TimerMode,
   type TimerState,
@@ -107,31 +106,50 @@ export default function Dashboard() {
     const stored = loadTimer();
     if (!stored) return;
 
+    // App was closed while timer was running → reset completely
+    if (stored.closedWhileRunning) {
+      setIsRunning(false);
+      setRemainingSec(stored.durationSec);
+      saveTimer({
+        ...stored,
+        isRunning: false,
+        remainingSec: stored.durationSec,
+        closedWhileRunning: undefined,
+        lastTickAt: Date.now(),
+      });
+      return;
+    }
+
     if (stored.isRunning) {
       const remaining = computeRemaining(stored);
       if (remaining <= 0) {
         handleCompletion(stored);
       } else {
-        // Auto-pause: timer was running when app was closed/reopened
-        setIsRunning(false);
+        // Timer continues across navigation — just sync state
+        setIsRunning(true);
         setRemainingSec(remaining);
-        saveTimer({ ...stored, isRunning: false, remainingSec: remaining, lastTickAt: Date.now() });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ---- Auto-pause timer when tab/window is closed ----
+  // ---- Mark timer for reset when tab/window is closed ----
   useEffect(() => {
-    const pause = () => {
+    const markClosed = () => {
       const stored = loadTimer();
       if (stored?.isRunning) {
         const remaining = computeRemaining(stored);
-        saveTimer({ ...stored, isRunning: false, remainingSec: remaining, lastTickAt: Date.now() });
+        saveTimer({
+          ...stored,
+          isRunning: false,
+          remainingSec: remaining,
+          closedWhileRunning: true,
+          lastTickAt: Date.now(),
+        });
       }
     };
-    window.addEventListener("beforeunload", pause);
-    return () => window.removeEventListener("beforeunload", pause);
+    window.addEventListener("beforeunload", markClosed);
+    return () => window.removeEventListener("beforeunload", markClosed);
   }, []);
 
 
@@ -142,18 +160,6 @@ export default function Dashboard() {
     const interval = setInterval(() => {
       const stored = loadTimer();
       if (!stored || !stored.isRunning) return;
-
-      // Auto-pause if there was a gap (app was hidden/closed)
-      if (stored.lastTickAt && Date.now() - stored.lastTickAt > 2500) {
-        const remaining = computeRemaining(stored);
-        setIsRunning(false);
-        setRemainingSec(remaining > 0 ? remaining : 0);
-        saveTimer({ ...stored, isRunning: false, remainingSec: remaining > 0 ? remaining : 0, lastTickAt: Date.now() });
-        if (remaining <= 0) {
-          handleCompletion(stored);
-        }
-        return;
-      }
 
       const remaining = computeRemaining(stored);
       if (remaining <= 0) {
@@ -274,6 +280,7 @@ export default function Dashboard() {
         startedAt: now,
         durationSec: durationForMode,
         remainingSec: durationForMode,
+        closedWhileRunning: undefined,
         lastTickAt: now,
       }));
     }
@@ -286,7 +293,7 @@ export default function Dashboard() {
     const currentRemaining = computeRemaining(stored);
     setIsRunning(false);
     setRemainingSec(currentRemaining);
-    saveTimer({ ...stored, isRunning: false, remainingSec: currentRemaining, lastTickAt: Date.now() });
+    saveTimer({ ...stored, isRunning: false, remainingSec: currentRemaining, closedWhileRunning: undefined, lastTickAt: Date.now() });
   };
 
   const resetTimer = () => {
@@ -422,10 +429,6 @@ export default function Dashboard() {
   const formattedTime = formatTime(remainingSec);
   const progress = Math.min(100, Math.round((1 - remainingSec / durationForMode) * 100));
 
-  const openOverlay = async () => {
-    try { await invoke("open_overlay"); } catch { /* Tauri only */ }
-  };
-
   const ringSize = "18rem";
   const ringThickness = "16px";
 
@@ -541,9 +544,6 @@ export default function Dashboard() {
           );
         })()}
 
-        {typeof window !== "undefined" && ("__TAURI__" in window || "__TAURI_INTERNALS__" in window) && (
-          <button className="btn btn-ghost btn-sm mt-4 hidden md:inline-flex" onClick={openOverlay}>Open overlay</button>
-        )}
       </div>
     </div>
   );

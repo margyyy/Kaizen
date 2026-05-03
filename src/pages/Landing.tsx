@@ -381,8 +381,7 @@ export default function Landing() {
               { title: "Roadmaps", desc: "Break down each subject into macro topics and micro steps. Plan your entire learning path." },
               { title: "Flashcards", desc: "Create decks with spaced repetition. Review cards daily to strengthen long-term memory." },
               { title: "Cloud Sync", desc: "Sign in with Google to sync your data across devices. Never lose your progress." },
-              { title: "Desktop App", desc: "Native Tauri app for Windows, macOS, and Linux. Mini overlay window for focus sessions." },
-              { title: "Overlay Window", desc: "Mini floating timer window for distraction-free focus. Always on top, always visible." },
+              { title: "Desktop App", desc: "Native Tauri app for Windows, macOS, and Linux. Download and run — no installation required." },
             ].map((f) => (
               <div key={f.title} className="card bg-base-200 border border-base-300">
                 <div className="card-body p-5">

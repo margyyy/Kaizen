@@ -78,6 +78,14 @@ function AppRoot() {
         if (localStorage.getItem("studyflow.tourComplete") !== "true") return "tour";
         return "app";
       }
+      // Check for cached Supabase session even when no local data exists
+      try {
+        const raw = localStorage.getItem("sb-lpnjxkzeyiifzzycmftg-auth-token");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.access_token) return "splash";
+        }
+      } catch {}
       return "splash";
     }
     // Web: check cached session synchronously via Supabase's localStorage
@@ -145,7 +153,7 @@ function AppRoot() {
   // After splash, decide where to go
   const handleSplashDone = async () => {
     if (isTauri) {
-      // Desktop: check for existing data or show onboarding
+      // Desktop: check for existing data, Google session, and cloud data
       if (showProfile) {
         localStorage.setItem("studyflow.active", "true");
         setPhase("profile");
@@ -155,33 +163,38 @@ function AppRoot() {
       if (saved) {
         setData(saved);
         applyTheme(saved);
-        // Check for existing Google session on startup so user stays logged in
         try {
           const { data: sessionData } = await supabase.auth.getSession();
           if (sessionData.session) {
             setSyncEnabled(true);
+            const remote = await pullData();
+            if (remote && saved.subjects.length > 0) {
+              // Both local and remote data — show conflict dialog
+              setSyncConflict(remote);
+              return;
+            }
+            if (remote) {
+              // Only remote data — overwrite local
+              saveData(remote);
+              setData(remote);
+              setStoredUsername(remote.username);
+              applyTheme(remote);
+            }
           }
         } catch { /* offline or not signed in */ }
-        setPhase("app");
+        if (!syncConflict) setPhase("app");
       } else {
         setPhase("onboarding");
       }
     } else {
-      // Web: check Google session
+      // Web: always cloud — never ask, always overwrite local with remote
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData.session) {
           const remote = await pullData();
           const local = loadData();
-          if (remote && local && local.subjects.length > 0) {
-            // Both local and remote data — ask user instead of overwriting
-            setData(local);
-            applyTheme(local);
-            setSyncConflict(remote);
-            return;
-          }
           if (remote) {
-            // Only remote data exists
+            // Cloud data exists — always overwrite local
             setSyncEnabled(true);
             saveData(remote);
             setData(remote);
@@ -248,12 +261,25 @@ function AppRoot() {
     }
   };
 
-  const handleDesktopContinue = () => {
+  const handleDesktopContinue = async () => {
     const saved = loadData();
     if (saved) {
       setData(saved);
       setStoredUsername(saved.username);
       applyTheme(saved);
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          setSyncEnabled(true);
+          const remote = await pullData();
+          if (remote) {
+            saveData(remote);
+            setData(remote);
+            setStoredUsername(remote.username);
+            applyTheme(remote);
+          }
+        }
+      } catch { /* offline or not signed in */ }
       setPhase("app");
     }
   };
@@ -309,15 +335,15 @@ function AppRoot() {
               You have data both locally and in the cloud. Which would you like to keep?
             </p>
             <div className="flex gap-3 mt-4">
-              <button className="btn btn-primary flex-1" onClick={() => resolveSyncConflict(false)}>
-                Keep local data
-              </button>
-              <button className="btn btn-outline flex-1" onClick={() => resolveSyncConflict(true)}>
+              <button className="btn btn-primary flex-1" onClick={() => resolveSyncConflict(true)}>
                 Load cloud data
+              </button>
+              <button className="btn btn-outline flex-1" onClick={() => resolveSyncConflict(false)}>
+                Keep local data
               </button>
             </div>
             <p className="text-xs text-base-content/40 mt-2">
-              Choosing "Keep local data" will upload it to the cloud.
+              Choosing "Load cloud data" will replace all local data with your cloud data.
             </p>
           </div>
         </div>
