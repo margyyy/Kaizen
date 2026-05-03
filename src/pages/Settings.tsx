@@ -147,6 +147,16 @@ export default function Settings() {
           </p>
         </div>
       </div>
+
+      {/* Version */}
+      <div className="card bg-base-100 shadow-sm border border-base-300">
+        <div className="card-body">
+          <h3 className="font-semibold">Version</h3>
+          <p className="text-sm text-base-content/60 mt-1">
+            {data.appVersion}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

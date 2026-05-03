@@ -10,6 +10,7 @@ export function loadData(): AppData | null {
     // Migrate old data that doesn't have theme/accent
     if (!parsed.theme) parsed.theme = "dark";
     if (!parsed.accent) parsed.accent = "slate";
+    if (!parsed.appVersion) parsed.appVersion = "0.0.0";
     return parsed as AppData;
   } catch {
     return null;

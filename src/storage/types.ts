@@ -9,8 +9,10 @@ import type {
   StudyTask,
   Subject,
 } from "../db";
+import { APP_VERSION } from "../version";
 
 export interface AppData {
+  appVersion: string;
   username: string;
   theme: string;
   accent: string;
@@ -28,6 +30,7 @@ export interface AppData {
 
 export function createEmptyData(username: string, theme = "dark", accent = "slate"): AppData {
   return {
+    appVersion: APP_VERSION,
     username,
     theme,
     accent,
