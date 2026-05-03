@@ -79,6 +79,7 @@ None yet.
 |---|-------------|------|--------|-----------|
 | 260503-on8 | Offline-only mode: disable Google auth (preserve code), add JSON export/import buttons in Settings, timer persists on tray close (reset only on full kill) | 2026-05-03 | e23f68e | [260503-on8-offline-only-mode-disable-google-auth-pr](./quick/260503-on8-offline-only-mode-disable-google-auth-pr/) |
 | 260503-w2g | Implement classic Pomodoro session tracking: pause locks subject/task/mode (only reset unlocks), manual start after completion (no auto-start), reset zeros completedFocuses counter | 2026-05-03 | 6d3cb23 | [260503-w2g-implement-classic-pomodoro-session-track](./quick/260503-w2g-implement-classic-pomodoro-session-track/) |
+| 260503-wfe | Web sync refinement: app version, Google auth flow, real-time push, fix delete account | 2026-05-03 | a20ff77, 68ce51a, afb61c4, 66ceb8c | [260503-wfe-web-sync-refinement-real-time-json-push-](./quick/260503-wfe-web-sync-refinement-real-time-json-push-/) |
 
 ## Deferred Items
 
@@ -89,7 +90,7 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-05-03T22:27:31.000Z
-Stopped at: Completed quick task 260503-on8 (Offline-only mode)
+Stopped at: Completed quick task 260503-wfe (Web sync refinement)
 Resume file: None
 
 ## Plan 02 Metrics

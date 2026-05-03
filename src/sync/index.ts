@@ -57,6 +57,16 @@ export async function deleteAccount(): Promise<void> {
   if (!session) throw new Error("Not authenticated");
   const googleId = session.user.id;
   await supabase.from("user_data").delete().eq("google_id", googleId);
+  // Clear ALL local data
+  const KEYS = [
+    "studyflow.data", "studyflow.timer", "studyflow.active",
+    "studyflow.sync", "studyflow.username", "studyflow.tourComplete",
+    "studyflow.theme", "studyflow.accent", "studyflow.durations",
+    "studyflow.syncResolved",
+  ];
+  for (const key of KEYS) {
+    localStorage.removeItem(key);
+  }
   await supabase.auth.signOut();
 }
 
