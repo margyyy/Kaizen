@@ -6,7 +6,7 @@ Kaizen has critical bugs in auth, sync, and timer behavior across web and deskto
 
 ## Phases
 
-- [ ] **Phase 1: Bug Fixes -- Auth, Sync, and Timer Stability** - Fix all auth, sync, timer, and cross-platform bugs across web and desktop
+- [x] **Phase 1: Bug Fixes -- Auth, Sync, and Timer Stability** - Fix all auth, sync, timer, and cross-platform bugs across web and desktop (completed 2026-05-03)
 
 ## Phase Details
 
@@ -24,7 +24,7 @@ Kaizen has critical bugs in auth, sync, and timer behavior across web and deskto
 **UI hint**: yes
 
 Plans:
-- [ ] 01-01-PLAN.md -- Auth & sync fixes: web login, no-account removal, conflict dialog triggers
+- [x] 01-01-PLAN.md -- Auth & sync fixes: web login, no-account removal, conflict dialog triggers
 - [x] 01-02-PLAN.md -- Timer fixes: full reset on app close, navigation continuity, isolation verification
 
 ## Progress
@@ -34,4 +34,4 @@ Phases execute in numeric order: 1
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Bug Fixes -- Auth, Sync, and Timer Stability | 1/2 | In progress | 2026-05-03 (Plan 2) |
+| 1. Bug Fixes -- Auth, Sync, and Timer Stability | 2/2 | Complete   | 2026-05-03 |

@@ -4,18 +4,18 @@
 
 ### Auth & Platform
 
-- [ ] **AUTH-01**: Web login with Google must work -- user signs in, cloud data loads, app opens
-- [ ] **AUTH-02**: Any user must be able to register/sign in from web -- remove the "desktop app required first" gate (`no-account` phase)
-- [ ] **AUTH-03**: On desktop, Google session must persist across app restarts -- closing and reopening the app keeps the user signed in
-- [ ] **AUTH-04**: Web has no local-first concept -- web is always cloud, never prompts about local vs cloud data
+- [x] **AUTH-01**: Web login with Google must work -- user signs in, cloud data loads, app opens
+- [x] **AUTH-02**: Any user must be able to register/sign in from web -- remove the "desktop app required first" gate (`no-account` phase)
+- [x] **AUTH-03**: On desktop, Google session must persist across app restarts -- closing and reopening the app keeps the user signed in
+- [x] **AUTH-04**: Web has no local-first concept -- web is always cloud, never prompts about local vs cloud data
 
 ### Sync & Data
 
-- [ ] **SYNC-01**: On desktop, when user signs in with Google and both local and cloud data exist -- immediately show conflict dialog ("Load cloud data" overwriting local, or "Keep local data" uploading to cloud)
-- [ ] **SYNC-02**: Same conflict dialog (SYNC-01) must appear when user toggles sync off and back on
-- [ ] **SYNC-03**: Same conflict dialog (SYNC-01) must appear when user enables sync from Settings -- Sync section
-- [ ] **SYNC-04**: When "Load cloud data" is chosen, ALL cloud data overwrites local completely
-- [ ] **SYNC-05**: On web, cloud data always overwrites local on sign-in -- no conflict dialog ever
+- [x] **SYNC-01**: On desktop, when user signs in with Google and both local and cloud data exist -- immediately show conflict dialog ("Load cloud data" overwriting local, or "Keep local data" uploading to cloud)
+- [x] **SYNC-02**: Same conflict dialog (SYNC-01) must appear when user toggles sync off and back on
+- [x] **SYNC-03**: Same conflict dialog (SYNC-01) must appear when user enables sync from Settings -- Sync section
+- [x] **SYNC-04**: When "Load cloud data" is chosen, ALL cloud data overwrites local completely
+- [x] **SYNC-05**: On web, cloud data always overwrites local on sign-in -- no conflict dialog ever
 
 ### Timer
 
@@ -26,8 +26,8 @@
 
 ### Cross-cutting
 
-- [ ] **CROSS-01**: Desktop OAuth flow must work correctly -- after Google sign-in, the callback reaches the Tauri webview and stores the session token
-- [ ] **CROSS-02**: Supabase session token (`sb-*-auth-token` in localStorage) must be checked on every desktop cold start
+- [x] **CROSS-01**: Desktop OAuth flow must work correctly -- after Google sign-in, the callback reaches the Tauri webview and stores the session token
+- [x] **CROSS-02**: Supabase session token (`sb-*-auth-token` in localStorage) must be checked on every desktop cold start
 
 ## Out of Scope
 
@@ -39,21 +39,21 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
-| SYNC-01 | Phase 1 | Pending |
-| SYNC-02 | Phase 1 | Pending |
-| SYNC-03 | Phase 1 | Pending |
-| SYNC-04 | Phase 1 | Pending |
-| SYNC-05 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Complete |
+| AUTH-02 | Phase 1 | Complete |
+| AUTH-03 | Phase 1 | Complete |
+| AUTH-04 | Phase 1 | Complete |
+| SYNC-01 | Phase 1 | Complete |
+| SYNC-02 | Phase 1 | Complete |
+| SYNC-03 | Phase 1 | Complete |
+| SYNC-04 | Phase 1 | Complete |
+| SYNC-05 | Phase 1 | Complete |
 | TIMER-01 | Phase 1 | Complete |
 | TIMER-02 | Phase 1 | Complete |
 | TIMER-03 | Phase 1 | Complete |
 | TIMER-04 | Phase 1 | Complete |
-| CROSS-01 | Phase 1 | Pending |
-| CROSS-02 | Phase 1 | Pending |
+| CROSS-01 | Phase 1 | Complete |
+| CROSS-02 | Phase 1 | Complete |
 
 ---
 *Last updated: 2026-05-03*
