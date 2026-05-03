@@ -289,7 +289,13 @@ function AppRoot() {
         if (sessionData.session) {
           setSyncEnabled(true);
           const remote = await pullData();
+          if (remote && saved.subjects.length > 0) {
+            // Both local and remote data exist -- show conflict dialog
+            setSyncConflict(remote);
+            return;
+          }
           if (remote) {
+            // Only remote data -- overwrite local
             saveData(remote);
             setData(remote);
             setStoredUsername(remote.username);
