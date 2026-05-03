@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useState } from "react";
 import type { AppData } from "./storage/types";
 import { loadData, saveData } from "./storage";
 import { isSyncEnabled, pushData } from "./sync";
+import { debugSaveAppData } from "./debug";
 
 interface DataContextType {
   data: AppData;
@@ -36,6 +37,7 @@ export function DataProvider({
       const next = updater(prev);
       saveData(next);
       scheduleSync();
+      debugSaveAppData(next).catch(() => {});
       return next;
     });
   }, []);

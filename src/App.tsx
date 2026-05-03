@@ -14,6 +14,7 @@ import { getStoredUsername, setStoredUsername, clearStoredUsername } from "./aut
 import { supabase } from "./supabase";
 import { pullData, pushData, setSyncEnabled, signInWithGoogle } from "./sync";
 import { checkForUpdate } from "./updateCheck";
+import { debugLog } from "./debug";
 import UpdateOverlay from "./UpdateOverlay";
 import Dashboard from "./pages/Dashboard";
 import Overview from "./pages/Overview";
@@ -80,13 +81,18 @@ function AppRoot() {
         const raw = localStorage.getItem("sb-lpnjxkzeyiifzzycmftg-auth-token");
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed?.access_token) return "splash";
+          if (parsed?.access_token) {
+            debugLog("initPhase", "desktop: found cached token, going to splash").catch(() => {});
+            return "splash";
+          }
         }
       } catch {}
       if (savedData) {
+        debugLog("initPhase", `desktop: has local data (${savedData.subjects.length} subjects), no token`).catch(() => {});
         if (localStorage.getItem("studyflow.tourComplete") !== "true") return "tour";
         return "app";
       }
+      debugLog("initPhase", "desktop: no data, no token, going to splash").catch(() => {});
       return "splash";
     }
     // Web: check cached session synchronously via Supabase's localStorage
@@ -94,9 +100,13 @@ function AppRoot() {
       const raw = localStorage.getItem("sb-lpnjxkzeyiifzzycmftg-auth-token");
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed?.access_token) return "splash"; // has token, will check in handleSplashDone
+        if (parsed?.access_token) {
+          debugLog("initPhase", "web: found cached token, going to splash").catch(() => {});
+          return "splash"; // has token, will check in handleSplashDone
+        }
       }
     } catch {}
+    debugLog("initPhase", "web: no cached token, going to splash").catch(() => {});
     return "splash";
   });
 
@@ -153,6 +163,7 @@ function AppRoot() {
 
   // After splash, decide where to go
   const handleSplashDone = async () => {
+    debugLog("handleSplashDone", `platform=${isTauri ? "desktop" : "web"}`).catch(() => {});
     if (isTauri) {
       // Desktop: check for existing data, Google session, and cloud data
       if (showProfile) {
@@ -204,29 +215,21 @@ function AppRoot() {
         setPhase("onboarding");
       }
     } else {
-      // Web: always cloud — never ask, always overwrite local with remote
+      // Web: always cloud — never use local data, never push local to cloud
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         if (sessionData.session) {
           const remote = await pullData();
-          const local = loadData();
           if (remote) {
-            // Cloud data exists — always overwrite local
+            // Cloud data exists — load it
             setSyncEnabled(true);
             saveData(remote);
             setData(remote);
             setStoredUsername(remote.username);
             applyTheme(remote);
             setPhase("app");
-          } else if (local) {
-            // Only local data — push to cloud
-            setSyncEnabled(true);
-            setData(local);
-            setStoredUsername(local.username);
-            applyTheme(local);
-            setPhase("app");
-            try { await pushData(local); } catch { /* offline */ }
           } else {
+            // No cloud data — new user, start fresh
             setPhase("name-prompt");
           }
         } else {
@@ -255,6 +258,12 @@ function AppRoot() {
 
   const handleWebSignOut = async () => {
     await supabase.auth.signOut();
+    // Web is always cloud — clear all local data so a new account starts fresh
+    localStorage.removeItem("studyflow.data");
+    localStorage.removeItem("studyflow.username");
+    localStorage.removeItem("studyflow.sync");
+    localStorage.removeItem("studyflow.lastSync");
+    localStorage.removeItem("studyflow.syncResolved");
     setData(null);
     setPhase("google-signin");
   };
@@ -330,8 +339,9 @@ function AppRoot() {
     setPhase("profile");
   };
 
-  // Sync conflict resolution (web)
+  // Sync conflict resolution
   const resolveSyncConflict = (useRemote: boolean) => {
+    debugLog("resolveSyncConflict", `useRemote=${useRemote} hasConflict=${!!syncConflict} hasData=${!!data}`).catch(() => {});
     if (useRemote && syncConflict) {
       saveData(syncConflict);
       setData(syncConflict);

@@ -150,6 +150,12 @@ function WebAccountSection() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    // Web is always cloud — clear all local data so a new account starts fresh
+    localStorage.removeItem("studyflow.data");
+    localStorage.removeItem("studyflow.username");
+    localStorage.removeItem("studyflow.sync");
+    localStorage.removeItem("studyflow.lastSync");
+    localStorage.removeItem("studyflow.syncResolved");
     window.location.reload();
   };
 

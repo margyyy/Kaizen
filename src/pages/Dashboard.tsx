@@ -5,6 +5,7 @@ import {
 } from "../db";
 import { useData } from "../DataContext";
 import { notify } from "../notifications";
+import { debugSaveTimer } from "../debug";
 
 const DEFAULT_FOCUS = 25 * 60;
 const DEFAULT_SHORT = 5 * 60;
@@ -23,6 +24,7 @@ function loadTimer(): TimerState | null {
 
 function saveTimer(state: TimerState): void {
   localStorage.setItem(TIMER_KEY, JSON.stringify(state));
+  debugSaveTimer(state).catch(() => {});
 }
 
 function loadDurations(): { focus: number; shortBreak: number; longBreak: number } | null {
@@ -104,9 +106,28 @@ export default function Dashboard() {
     }
 
     const stored = loadTimer();
+
+    // sessionStorage is cleared when the browser tab / Tauri webview is destroyed.
+    // If this flag is missing, it's a fresh session → always reset timer to defaults.
+    // If the flag exists, it's an in-app navigation → restore running timer from localStorage.
+    const isNewSession = !sessionStorage.getItem("timerInitialized");
+
+    if (isNewSession) {
+      sessionStorage.setItem("timerInitialized", "true");
+      // Fresh session: full reset regardless of what's in localStorage
+      setIsRunning(false);
+      setSelectedSubjectId("");
+      setSelectedTaskId("");
+      setMode("focus");
+      setRemainingSec(DEFAULT_FOCUS);
+      setCompletedFocuses(0);
+      localStorage.removeItem(TIMER_KEY);
+      return;
+    }
+
     if (!stored) return;
 
-    // App/tab was closed while timer had state -- full reset to defaults
+    // App/tab was closed while timer had state (web beforeunload path) — full reset
     if (stored.closedWhileRunning) {
       setIsRunning(false);
       setSelectedSubjectId("");
@@ -149,7 +170,22 @@ export default function Dashboard() {
       }
     };
     window.addEventListener("beforeunload", markClosed);
-    return () => window.removeEventListener("beforeunload", markClosed);
+
+    // Tauri: listen for window close/destroy events (beforeunload doesn't fire on window hide)
+    let tauriUnlisten: (() => void) | undefined;
+    const isTauriEnv = typeof window !== "undefined" && ("__TAURI__" in window || "__TAURI_INTERNALS__" in window);
+    if (isTauriEnv) {
+      import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
+        getCurrentWindow().onCloseRequested(async () => {
+          markClosed();
+        }).then((fn) => { tauriUnlisten = fn; });
+      }).catch(() => {});
+    }
+
+    return () => {
+      window.removeEventListener("beforeunload", markClosed);
+      if (tauriUnlisten) tauriUnlisten();
+    };
   }, []);
 
 
